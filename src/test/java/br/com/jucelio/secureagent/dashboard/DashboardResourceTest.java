@@ -42,7 +42,7 @@ class DashboardResourceTest {
         assertTrue(javascript.contains("HUMAN_APPROVED"), "timeline should include the human approval stage");
         assertTrue(javascript.contains("TOOL_EXECUTED"), "timeline should include the controlled tool execution stage");
         assertTrue(javascript.contains("COMPLETED"), "timeline should include the terminal completed stage");
-        assertTrue(javascript.contains("timeline-item future"), "future lifecycle stages should be visibly distinguished");
+        assertTrue(javascript.contains("future ? 'future'"), "future lifecycle stages should be visibly distinguished");
     }
 
     private String resource(String path) throws IOException {
