@@ -15,6 +15,16 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:secure-agent-hub}
+      auto-offset-reset: earliest
 
 server:
   port: ${PORT:8080}
@@ -27,6 +37,9 @@ app:
       secret: ${JWT_SECRET:change-me-secure-agent-hub-dev-secret-32bytes-minimum}
       access-ttl: ${JWT_ACCESS_TTL:15m}
       refresh-ttl: ${JWT_REFRESH_TTL:7d}
+  events:
+    topic: ${AGENT_EVENTS_TOPIC:secure-agent.events}
+    outbox-poll-delay-ms: ${OUTBOX_POLL_DELAY_MS:1000}
 
 management:
   endpoints:
