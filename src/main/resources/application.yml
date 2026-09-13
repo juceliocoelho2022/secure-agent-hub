@@ -26,6 +26,15 @@ spring:
       group-id: ${KAFKA_GROUP_ID:secure-agent-hub}
       auto-offset-reset: earliest
       enable-auto-commit: false
+  ai:
+    model:
+      chat: ${SPRING_AI_CHAT_MODEL:none}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5-mini}
+          temperature: ${OPENAI_CHAT_TEMPERATURE:0.2}
 
 server:
   port: ${PORT:8080}
