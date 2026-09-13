@@ -1,8 +1,5 @@
 package br.com.jucelio.secureagent.tool;
 
-import org.springframework.stereotype.Component;
-
-@Component
 public class RuleBasedAgentPlanner implements AgentPlanner {
     @Override
     public AgentPlan plan(String prompt) {

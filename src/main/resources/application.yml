@@ -35,6 +35,10 @@ spring:
       audio:
         speech: ${SPRING_AI_AUDIO_SPEECH_MODEL:none}
         transcription: ${SPRING_AI_AUDIO_TRANSCRIPTION_MODEL:none}
+    chat:
+      client:
+        tool-calling:
+          enabled: false
     openai:
       api-key: ${OPENAI_API_KEY:}
       chat:
@@ -46,6 +50,8 @@ server:
   port: ${PORT:8080}
 
 app:
+  agent:
+    planner: ${AGENT_PLANNER:rules}
   bootstrap:
     dev-users: ${BOOTSTRAP_DEV_USERS:true}
   security:
