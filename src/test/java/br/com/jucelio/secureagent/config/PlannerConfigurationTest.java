@@ -1,7 +1,9 @@
 package br.com.jucelio.secureagent.config;
 
 import br.com.jucelio.secureagent.ai.AiPlanningClient;
+import br.com.jucelio.secureagent.ai.AiPlanningResult;
 import br.com.jucelio.secureagent.ai.AiToolProposal;
+import br.com.jucelio.secureagent.ai.AiUsageMetadata;
 import br.com.jucelio.secureagent.tool.AgentPlanner;
 import br.com.jucelio.secureagent.tool.RuleBasedAgentPlanner;
 import br.com.jucelio.secureagent.tool.SpringAiAgentPlanner;
@@ -60,7 +62,9 @@ class PlannerConfigurationTest {
     static class StubAiPlanningConfiguration {
         @Bean
         AiPlanningClient aiPlanningClient() {
-            return prompt -> new AiToolProposal("calculateRisk", "stub");
+            return prompt -> new AiPlanningResult(
+                    new AiToolProposal("calculateRisk", "stub"),
+                    AiUsageMetadata.unknown());
         }
     }
 }
