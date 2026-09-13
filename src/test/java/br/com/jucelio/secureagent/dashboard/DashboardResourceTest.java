@@ -45,6 +45,19 @@ class DashboardResourceTest {
         assertTrue(javascript.contains("future ? 'future'"), "future lifecycle stages should be visibly distinguished");
     }
 
+    @Test
+    void dashboardInspectorShowsPlannerAndProviderUsageWithoutFabricatingTokens() throws IOException {
+        String html = resource("/static/dashboard.html");
+        String javascript = resource("/static/assets/dashboard.js");
+
+        assertTrue(html.contains("id=\"plannerTelemetry\""), "inspector should expose planner telemetry");
+        assertTrue(javascript.contains("plannerSource"), "dashboard should render the planner source returned by the API");
+        assertTrue(javascript.contains("promptTokens"), "dashboard should render prompt token usage when available");
+        assertTrue(javascript.contains("completionTokens"), "dashboard should render completion token usage when available");
+        assertTrue(javascript.contains("totalTokens"), "dashboard should render total token usage when available");
+        assertTrue(javascript.contains("Provider usage: n/a"), "rule-based executions should not fabricate zero token usage");
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getResourceAsStream(path)) {
             if (input == null) {
