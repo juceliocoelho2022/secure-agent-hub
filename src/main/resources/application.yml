@@ -42,6 +42,7 @@ app:
     topic: ${AGENT_EVENTS_TOPIC:secure-agent.events}
     dlt-topic: ${AGENT_EVENTS_DLT_TOPIC:secure-agent.events.DLT}
     outbox-poll-delay-ms: ${OUTBOX_POLL_DELAY_MS:1000}
+    failure-injection-event-type: ${AGENT_EVENTS_FAILURE_INJECTION_TYPE:agent.test.failure}
 
 management:
   endpoints:
