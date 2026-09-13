@@ -1,17 +1,17 @@
 # 🛡️ SecureAgent Hub
 
-> **Secure AI Agent Execution Platform** — Java, Spring Boot, security, policy enforcement, Human-in-the-Loop and event-driven architecture.
+> **Secure AI Agent Execution Platform** — Java 21, Spring Boot, Spring AI, security, policy enforcement, Human-in-the-Loop and event-driven architecture.
 
 [![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring AI](https://img.shields.io/badge/Spring%20AI-1.1.8-6DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-ai)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.9.1-231F20?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![CI](https://github.com/juceliocoelho2022/secure-agent-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/juceliocoelho2022/secure-agent-hub/actions/workflows/ci.yml)
 
-O **SecureAgent Hub** é um projeto de engenharia para estudar como colocar agentes de IA em produção sem entregar controle irrestrito ao modelo. A plataforma separa a interpretação da intenção da execução real, aplicando **autenticação, RBAC, políticas, aprovação humana, auditoria e processamento assíncrono resiliente**.
+O **SecureAgent Hub** é um projeto de engenharia para estudar como colocar agentes de IA em produção sem entregar controle irrestrito ao modelo. A plataforma separa interpretação de intenção, autorização e execução real, aplicando **JWT/RBAC, Policy Engine, Human-in-the-Loop, auditoria, Kafka e controles explícitos para uso de LLMs**.
 
-> **Princípio arquitetural:** o LLM pode interpretar a intenção. O backend controla a execução.
+> **Princípio arquitetural:** o LLM interpreta. O Policy Engine autoriza. O backend executa.
 
 ---
 
@@ -21,66 +21,101 @@ O **SecureAgent Hub** é um projeto de engenharia para estudar como colocar agen
   <img src="https://raw.githubusercontent.com/juceliocoelho2022/secure-agent-hub/main/docs/secure-agent-hub-dashboard.jpg" alt="SecureAgent Hub Dashboard Concept" width="100%" />
 </p>
 
-> A imagem representa a **visão de produto / mockup do dashboard**. A versão atual é focada no backend e APIs; Spring AI, RAG, observabilidade completa e interface serão adicionados incrementalmente.
+A aplicação inclui um dashboard operacional para acompanhar execuções, aprovações Human-in-the-Loop e timeline governada.
 
 ---
 
-## ✨ Estado atual — v1.2 Event Driven
+## ✨ Estado atual — v1.3 Controlled Spring AI Planner
 
 | Capacidade | Status |
 |---|---|
 | Java 21 + Spring Boot 3.5.5 | ✅ |
 | PostgreSQL 17 + Flyway | ✅ |
-| JWT Bearer Authentication | ✅ |
-| Refresh token persistido e rotacionado | ✅ |
+| JWT + refresh token rotation | ✅ |
 | RBAC (`ANALYST`, `OPERATOR`, `AUDITOR`, `ADMIN`) | ✅ |
 | Policy Engine | ✅ |
 | Human-in-the-Loop | ✅ |
 | Audit Trail | ✅ |
 | Apache Kafka 3.9.1 | ✅ |
 | Transactional Outbox | ✅ |
-| `DomainEventEnvelope` versionado | ✅ |
-| Kafka producer idempotente | ✅ |
-| Consumer idempotente / deduplicação | ✅ |
-| Retry + exponential backoff | ✅ |
-| Dead Letter Topic | ✅ |
-| JUnit / Mockito / JaCoCo | ✅ |
-| GitHub Actions CI | ✅ |
-| Spring AI + Tool Calling | 🗺️ v1.3 |
+| Consumer idempotente + retry/DLT | ✅ |
+| Dashboard operacional + Execution Inspector | ✅ |
+| Spring AI 1.1.8 foundation | ✅ |
+| Structured AI planning | ✅ |
+| Governed tool allowlist | ✅ |
+| Deterministic fallback | ✅ |
+| Automatic LLM tool execution | 🚫 desabilitado |
 | RAG + pgvector | 🗺️ v1.4 |
 | OpenTelemetry + Prometheus + Grafana | 🗺️ v1.5 |
 | AWS + Terraform + Kubernetes | 🗺️ v2.0 |
 
 ---
 
-## 🏗️ Arquitetura atual
+## 🏗️ Arquitetura
 
-```mermaid
-flowchart LR
-    U[Usuário] --> API[REST API]
-    API --> SEC[Spring Security / JWT]
-    SEC --> AG[RuleBased Agent Planner]
-    AG --> POL[Policy Engine]
-    POL -->|baixo risco| TOOL[Tool Executor]
-    POL -->|alto risco| HITL[Human Approval]
-    HITL -->|aprovado| TOOL
-    HITL -->|rejeitado| AUD[Audit Trail]
-    TOOL --> SYS[APIs / Serviços / DB]
-    AG --> EVT[Domain Events]
-    EVT --> OUT[(Transactional Outbox)]
-    OUT --> K[Kafka]
-    K --> CON[Idempotent Consumer]
-    CON --> PROC[(processed_events)]
-    CON -->|falha permanente| DLT[Dead Letter Topic]
+```text
+User Prompt
+    ↓
+REST API / Spring Security
+    ↓
+AgentPlanner
+   ↙                         ↘
+RuleBasedAgentPlanner     SpringAiAgentPlanner
+(default / fallback)      (structured proposal)
+   \                         /
+            AgentPlan
+               ↓
+          Policy Engine
+          ↙    ↓     ↘
+       ALLOW  HITL   DENY
+         ↓      ↓
+         ↓   Approve/Reject
+         \      /
+          ToolExecutor
+               ↓
+         Audit + Domain Events
+               ↓
+    Transactional Outbox → Kafka
 ```
 
-Na v1.2, o agente ainda utiliza `RuleBasedAgentPlanner`. Isso é intencional: consolidamos primeiro **identidade, autorização, controle de execução e infraestrutura distribuída**. A integração real com LLM/Spring AI entra na v1.3.
+A integração Spring AI foi deliberadamente construída **antes** da execução de tools. O `ChatClient` produz apenas uma proposta estruturada. A saída é validada contra um catálogo de ferramentas do backend e, somente depois, passa pelo mesmo `PolicyService` já utilizado pelo fluxo determinístico.
 
-📚 Documentação: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/EVENTS.md`](docs/EVENTS.md)
+Para operações protegidas como `blockCard`, a origem `SPRING_AI` não altera a regra: a execução permanece em `WAITING_APPROVAL` até uma decisão humana autorizada.
 
 ---
 
-## ⚡ Event-Driven v1.2
+## 🤖 Spring AI Controlled Planner
+
+Existem dois modos:
+
+```text
+AGENT_PLANNER=rules      → RuleBasedAgentPlanner
+AGENT_PLANNER=spring-ai  → SpringAiAgentPlanner
+```
+
+O modo padrão é `rules`, permitindo desenvolvimento e CI sem API key.
+
+No modo AI:
+
+```text
+ChatClient
+   ↓
+AiToolProposal
+   ↓
+ToolCatalog allowlist
+   ↓
+AgentPlan(source=SPRING_AI)
+   ↓
+Policy Engine
+```
+
+Falhas do provedor, resposta nula ou tool não permitida acionam fallback para o `RuleBasedAgentPlanner`. O modelo não recebe `ToolExecutor`, callbacks de execução ou autoridade de aprovação.
+
+📚 Veja [`docs/SPRING_AI.md`](docs/SPRING_AI.md).
+
+---
+
+## ⚡ Event-Driven Architecture
 
 ```text
 Business transaction
@@ -102,23 +137,23 @@ processed_events    retry / backoff
               secure-agent.events.DLT
 ```
 
-Os eventos utilizam um envelope padronizado com `eventId`, `eventType`, `aggregateType`, `aggregateId`, `occurredAt`, `correlationId`, `causationId`, `schemaVersion` e `payload`.
-
-A arquitetura assume **at-least-once delivery**. Duplicações são tratadas explicitamente pelo consumer através de `processed_events`; não há alegação de exactly-once end-to-end.
+A arquitetura assume **at-least-once delivery** e trata duplicação explicitamente no consumer. Não há alegação de exactly-once end-to-end.
 
 ---
 
 ## 🔐 Segurança por design
 
 - JWT Bearer + refresh token rotacionado;
-- RBAC e privilégio mínimo;
-- Policy Engine antes de operações sensíveis;
-- Human-in-the-Loop para ações críticas;
-- trilha de auditoria;
-- segredo JWT configurável por ambiente;
-- eventos assíncronos não contornam políticas de execução;
-- falhas permanentes do consumer são isoladas em DLT;
-- roadmap para observabilidade, RAG e proteção contra abuso de tools.
+- RBAC e princípio de least privilege;
+- Policy Engine antes da execução;
+- Human-in-the-Loop para operações críticas;
+- auditoria e provenance do planner (`RULE_BASED` / `SPRING_AI`);
+- allowlist de tools conhecida pelo backend;
+- automatic Spring AI tool calling desabilitado;
+- fallback determinístico para falha/malformed AI output;
+- segredos configurados por ambiente;
+- eventos assíncronos não contornam políticas;
+- retry/backoff e Dead Letter Topic no pipeline Kafka.
 
 Consulte [`SECURITY.md`](SECURITY.md).
 
@@ -126,17 +161,11 @@ Consulte [`SECURITY.md`](SECURITY.md).
 
 ## 🧰 Stack
 
-**Backend**  
-`Java 21` · `Spring Boot 3.5.5` · `Spring Security` · `Spring Data JPA` · `OAuth2 Resource Server / JWT`
+**Backend:** `Java 21` · `Spring Boot 3.5.5` · `Spring AI 1.1.8` · `Spring Security` · `Spring Data JPA`
 
-**Dados & Eventos**  
-`PostgreSQL 17` · `Flyway` · `Apache Kafka 3.9.1` · `Transactional Outbox`
+**Dados & Eventos:** `PostgreSQL 17` · `Flyway` · `Apache Kafka 3.9.1` · `Transactional Outbox`
 
-**Qualidade & Operação**  
-`JUnit 5` · `Mockito` · `JaCoCo` · `Docker Compose` · `GitHub Actions`
-
-**Próximas camadas**  
-`Spring AI` · `pgvector` · `OpenTelemetry` · `Prometheus` · `Grafana` · `AWS` · `Terraform` · `Kubernetes`
+**Qualidade & Operação:** `JUnit 5` · `Mockito` · `JaCoCo` · `Docker Compose` · `GitHub Actions`
 
 ---
 
@@ -148,44 +177,52 @@ Consulte [`SECURITY.md`](SECURITY.md).
 - Maven 3.9+
 - Docker / Docker Compose
 
-### 1. Suba PostgreSQL e Kafka
+### Infraestrutura
 
 ```bash
 docker compose up -d
 ```
 
-Portas locais do Compose:
-- aplicação: `8080`;
-- PostgreSQL do projeto: `5433`;
-- Kafka: `9092`.
+Portas locais: aplicação `8080`, PostgreSQL `5433`, Kafka `9092`.
 
-### 2. Configure um segredo JWT
-
-Linux/macOS:
-
-```bash
-export JWT_SECRET='um-segredo-longo-forte-e-gerenciado-fora-do-codigo'
-```
+### Modo seguro padrão — sem OpenAI API key
 
 PowerShell:
 
 ```powershell
-$env:JWT_SECRET="um-segredo-longo-forte-e-gerenciado-fora-do-codigo"
-```
-
-### 3. Execute
-
-```bash
+Remove-Item Env:OPENAI_API_KEY -ErrorAction SilentlyContinue
+$env:AGENT_PLANNER="rules"
+$env:SPRING_AI_CHAT_MODEL="none"
 mvn spring-boot:run
 ```
 
-### 4. Valide o build
+Validação:
 
-```bash
-mvn clean verify
+```powershell
+Invoke-RestMethod http://localhost:8080/actuator/health
 ```
 
-O CI executa `mvn clean verify` e publica o relatório JaCoCo como artifact.
+### Modo Spring AI
+
+Nunca versione uma API key. Configure-a somente no ambiente local/secret manager:
+
+```powershell
+$env:AGENT_PLANNER="spring-ai"
+$env:SPRING_AI_CHAT_MODEL="openai"
+$env:OPENAI_API_KEY="<set-locally-not-in-git>"
+$env:OPENAI_CHAT_MODEL="gpt-5-mini"
+mvn spring-boot:run
+```
+
+Neste modo o modelo **propõe** uma ferramenta; ele não a executa diretamente.
+
+### Build completo
+
+```bash
+mvn -B -ntp clean verify
+```
+
+O CI executa o mesmo `clean verify` em Java 21 e publica JaCoCo como artifact.
 
 ---
 
@@ -198,38 +235,7 @@ O CI executa `mvn clean verify` e publica o relatório JaCoCo como artifact.
 | `auditor` | `auditor123` | AUDITOR |
 | `admin` | `admin123` | ADMIN |
 
-⚠️ Credenciais exclusivamente para laboratório local. Para produção, utilize IdP/OIDC e mantenha `BOOTSTRAP_DEV_USERS=false`.
-
----
-
-## 🔑 Autenticação
-
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-```
-
-```json
-{
-  "username": "analyst",
-  "password": "analyst123"
-}
-```
-
-Perfil autenticado:
-
-```http
-GET /api/v1/users/me
-Authorization: Bearer <accessToken>
-```
-
-Refresh:
-
-```http
-POST /api/v1/auth/refresh
-```
-
-O refresh token utilizado é revogado e um novo par é emitido. Exemplos completos estão em [`http-requests.http`](http-requests.http).
+⚠️ Credenciais exclusivamente para laboratório local. Em produção, use IdP/OIDC e `BOOTSTRAP_DEV_USERS=false`.
 
 ---
 
@@ -238,8 +244,9 @@ O refresh token utilizado é revogado e um novo par é emitido. Exemplos complet
 | Área | Acesso |
 |---|---|
 | Execuções de agente | usuário autenticado |
+| Timeline operacional | `OPERATOR`, `AUDITOR`, `ADMIN` |
 | Aprovações | `OPERATOR` ou `ADMIN` |
-| Auditoria | `AUDITOR` ou `ADMIN` |
+| Auditoria completa | `AUDITOR` ou `ADMIN` |
 | Perfil | usuário autenticado |
 
 ---
@@ -247,52 +254,27 @@ O refresh token utilizado é revogado e um novo par é emitido. Exemplos complet
 ## 🛣️ Roadmap
 
 ```text
-v1.0  Secure Foundation            ✅
+v1.0  Secure Foundation                 ✅
   ↓
-v1.1  JWT / Persisted RBAC         ✅
+v1.1  JWT / Persisted RBAC              ✅
   ↓
-v1.2  Event-Driven / Kafka         ✅
+v1.2  Event-Driven / Kafka              ✅
   ↓
-v1.3  Spring AI / Tool Calling     ▶
+v1.3  Spring AI Controlled Planner      🚧
   ↓
-v1.4  RAG / pgvector               🗺️
+v1.4  RAG / pgvector                    🗺️
   ↓
-v1.5  Observability / AgentOps     🗺️
+v1.5  Observability / AgentOps          🗺️
   ↓
-v2.0  AWS / Terraform / EKS        🗺️
+v2.0  AWS / Terraform / EKS             🗺️
 ```
-
-Detalhes: [`ROADMAP.md`](ROADMAP.md).
-
----
-
-## 🤖 Próximo marco — v1.3 Spring AI
-
-A próxima versão introduzirá interpretação probabilística e Tool Calling sem entregar ao LLM autoridade direta sobre execução:
-
-```text
-User Intent
-    ↓
-Spring AI / ChatClient
-    ↓
-Structured Tool Proposal
-    ↓
-Policy Engine
-   ↙       ↘
-ALLOW     REQUIRE_APPROVAL
-  ↓             ↓
-Tool       Human-in-the-Loop
-Execution        ↓
-           controlled execution
-```
-
-Objetivos: **ChatClient, Tool Calling, structured output, provider abstraction, integração obrigatória com Policy Engine e métricas de tokens/custo**.
 
 ---
 
 ## 📖 Documentação
 
 - [Arquitetura](docs/ARCHITECTURE.md)
+- [Spring AI Controlled Planner](docs/SPRING_AI.md)
 - [Eventos e delivery semantics](docs/EVENTS.md)
 - [Roadmap](ROADMAP.md)
 - [Política de Segurança](SECURITY.md)
@@ -306,4 +288,4 @@ Objetivos: **ChatClient, Tool Calling, structured output, provider abstraction, 
 **Jucelio Farias Coelho**  
 Java Backend · Spring Boot · Sistemas Distribuídos · Cloud · IA aplicada
 
-Este projeto faz parte de uma jornada prática para conectar **engenharia de software tradicional + segurança + sistemas distribuídos + cloud + agentes de IA**.
+Projeto de portfólio focado na interseção de **engenharia backend, sistemas distribuídos, segurança e agentes de IA governados**.
