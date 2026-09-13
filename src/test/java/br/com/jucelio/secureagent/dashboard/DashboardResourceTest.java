@@ -16,13 +16,16 @@ class DashboardResourceTest {
         assertTrue(html.contains("id=\"userIdentity\""), "dashboard should render the authenticated user identity");
         assertTrue(html.contains("id=\"agentPromptForm\""), "dashboard should expose an Ask Agent form");
         assertTrue(html.contains("id=\"agentPrompt\""), "dashboard should expose the agent prompt input");
+        assertTrue(html.contains("id=\"executionInspector\""), "dashboard should expose an execution inspector");
+        assertTrue(html.contains("id=\"executionTimeline\""), "dashboard should expose an operational execution timeline");
     }
 
     @Test
-    void dashboardJavaScriptUsesRealExecutionAndApprovalEndpoints() throws IOException {
+    void dashboardJavaScriptUsesRealExecutionApprovalAndTimelineEndpoints() throws IOException {
         String javascript = resource("/static/assets/dashboard.js");
 
         assertTrue(javascript.contains("/api/v1/agents/executions"), "dashboard should create and refresh executions through the real API");
+        assertTrue(javascript.contains("/timeline"), "dashboard should load the operational timeline for an execution");
         assertTrue(javascript.contains("/approve"), "dashboard should support approval actions");
         assertTrue(javascript.contains("/reject"), "dashboard should support rejection actions");
         assertTrue(javascript.contains("authorities"), "dashboard should render roles returned by /api/v1/users/me");
