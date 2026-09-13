@@ -1,5 +1,6 @@
 package br.com.jucelio.secureagent.execution;
 
+import br.com.jucelio.secureagent.ai.AiUsageMetadata;
 import br.com.jucelio.secureagent.approval.ApprovalRequest;
 import br.com.jucelio.secureagent.approval.ApprovalRequestRepository;
 import br.com.jucelio.secureagent.audit.AuditService;
@@ -82,12 +83,13 @@ class AgentExecutionServiceTest {
     }
 
     @Test
-    void springAiBlockCardProposalStillRequiresHumanApproval() {
+    void springAiBlockCardProposalPersistsPlannerAndUsageAndStillRequiresHumanApproval() {
         when(planner.plan(anyString()))
                 .thenReturn(new AgentPlan(
                         "blockCard",
                         "Potential fraud detected",
-                        PlannerSource.SPRING_AI));
+                        PlannerSource.SPRING_AI,
+                        new AiUsageMetadata(21, 9, 30)));
 
         AgentExecution result = service.create(
                 new CreateExecutionRequest("fraud-agent", "block suspicious card"),
@@ -95,6 +97,17 @@ class AgentExecutionServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(ExecutionStatus.WAITING_APPROVAL);
         assertThat(result.getRequestedTool()).isEqualTo("blockCard");
+        assertThat(result.getPlannerSource()).isEqualTo(PlannerSource.SPRING_AI);
+        assertThat(result.getPromptTokens()).isEqualTo(21);
+        assertThat(result.getCompletionTokens()).isEqualTo(9);
+        assertThat(result.getTotalTokens()).isEqualTo(30);
+
+        ExecutionResponse response = ExecutionResponse.from(result);
+        assertThat(response.plannerSource()).isEqualTo(PlannerSource.SPRING_AI);
+        assertThat(response.promptTokens()).isEqualTo(21);
+        assertThat(response.completionTokens()).isEqualTo(9);
+        assertThat(response.totalTokens()).isEqualTo(30);
+
         verify(policyService).evaluate("blockCard");
         verify(approvalRepository).save(any(ApprovalRequest.class));
         verify(toolExecutor, never()).execute(anyString());
