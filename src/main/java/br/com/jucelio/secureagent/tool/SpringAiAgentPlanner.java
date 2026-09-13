@@ -1,6 +1,7 @@
 package br.com.jucelio.secureagent.tool;
 
 import br.com.jucelio.secureagent.ai.AiPlanningClient;
+import br.com.jucelio.secureagent.ai.AiPlanningResult;
 import br.com.jucelio.secureagent.ai.AiToolProposal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +24,13 @@ public class SpringAiAgentPlanner implements AgentPlanner {
     @Override
     public AgentPlan plan(String prompt) {
         try {
-            AiToolProposal proposal = client.propose(prompt);
-            if (proposal == null) {
-                log.warn("Spring AI planner returned no proposal; using deterministic fallback");
+            AiPlanningResult planningResult = client.propose(prompt);
+            if (planningResult == null) {
+                log.warn("Spring AI planner returned no planning result; using deterministic fallback");
                 return fallback.plan(prompt);
             }
+
+            AiToolProposal proposal = planningResult.proposal();
             if (!toolCatalog.isAllowed(proposal.toolName())) {
                 log.warn("Spring AI planner proposed unsupported tool={}; using deterministic fallback",
                         proposal.toolName());

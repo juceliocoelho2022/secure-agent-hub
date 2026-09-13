@@ -1,7 +1,9 @@
 package br.com.jucelio.secureagent.tool;
 
 import br.com.jucelio.secureagent.ai.AiPlanningClient;
+import br.com.jucelio.secureagent.ai.AiPlanningResult;
 import br.com.jucelio.secureagent.ai.AiToolProposal;
+import br.com.jucelio.secureagent.ai.AiUsageMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +26,9 @@ class SpringAiAgentPlannerTest {
     @Test
     void returnsSpringAiPlanForAllowedStructuredProposal() {
         when(client.propose("fraud prompt"))
-                .thenReturn(new AiToolProposal("blockCard", "fraud detected"));
+                .thenReturn(new AiPlanningResult(
+                        new AiToolProposal("blockCard", "fraud detected"),
+                        new AiUsageMetadata(12, 4, 16)));
 
         AgentPlan result = planner.plan("fraud prompt");
 
@@ -37,7 +41,9 @@ class SpringAiAgentPlannerTest {
     @Test
     void fallsBackWhenAiSuggestsUnsupportedTool() {
         when(client.propose(anyString()))
-                .thenReturn(new AiToolProposal("runShellCommand", "do it"));
+                .thenReturn(new AiPlanningResult(
+                        new AiToolProposal("runShellCommand", "do it"),
+                        AiUsageMetadata.unknown()));
         when(fallback.plan(anyString()))
                 .thenReturn(new AgentPlan(
                         "calculateRisk",
@@ -68,7 +74,7 @@ class SpringAiAgentPlannerTest {
     }
 
     @Test
-    void fallsBackWhenProviderReturnsNullProposal() {
+    void fallsBackWhenProviderReturnsNullResult() {
         when(client.propose(anyString())).thenReturn(null);
         when(fallback.plan(anyString()))
                 .thenReturn(new AgentPlan(

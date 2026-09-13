@@ -2,25 +2,46 @@ package br.com.jucelio.secureagent.ai;
 
 import br.com.jucelio.secureagent.tool.ToolCatalog;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.converter.BeanOutputConverter;
 
 import java.util.stream.Collectors;
 
 public class SpringAiPlanningClient implements AiPlanningClient {
     private final ChatClient chatClient;
     private final ToolCatalog toolCatalog;
+    private final BeanOutputConverter<AiToolProposal> outputConverter;
 
     public SpringAiPlanningClient(ChatClient chatClient, ToolCatalog toolCatalog) {
         this.chatClient = chatClient;
         this.toolCatalog = toolCatalog;
+        this.outputConverter = new BeanOutputConverter<>(AiToolProposal.class);
     }
 
     @Override
-    public AiToolProposal propose(String prompt) {
-        return chatClient.prompt()
+    public AiPlanningResult propose(String prompt) {
+        ChatResponse response = chatClient.prompt()
                 .system(systemPrompt())
                 .user(prompt)
                 .call()
-                .entity(AiToolProposal.class);
+                .chatResponse();
+
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            throw new IllegalStateException("Spring AI returned no chat response");
+        }
+
+        AiToolProposal proposal = outputConverter.convert(response.getResult().getOutput().getText());
+        Usage usage = response.getMetadata() == null ? null : response.getMetadata().getUsage();
+
+        AiUsageMetadata usageMetadata = usage == null
+                ? AiUsageMetadata.unknown()
+                : new AiUsageMetadata(
+                        usage.getPromptTokens(),
+                        usage.getCompletionTokens(),
+                        usage.getTotalTokens());
+
+        return new AiPlanningResult(proposal, usageMetadata);
     }
 
     String systemPrompt() {
@@ -36,6 +57,8 @@ public class SpringAiPlanningClient implements AiPlanningClient {
                 Allowed tools: %s.
                 The backend Policy Engine decides whether the proposal is allowed,
                 denied, or requires human approval.
-                """.formatted(tools);
+
+                %s
+                """.formatted(tools, outputConverter.getFormat());
     }
 }
