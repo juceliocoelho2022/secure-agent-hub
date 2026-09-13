@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: secureagent
       POSTGRES_PASSWORD: secureagent
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - secure_agent_pgdata_v12:/var/lib/postgresql/data
     healthcheck:
