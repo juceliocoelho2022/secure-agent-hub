@@ -7,6 +7,7 @@
     <title>SecureAgent Hub | Dashboard</title>
     <link rel="stylesheet" href="/assets/dashboard.css">
     <link rel="stylesheet" href="/assets/dashboard-controls.css">
+    <link rel="stylesheet" href="/assets/dashboard-visual.css">
 </head>
 <body>
 <div class="app-shell">
@@ -34,8 +35,8 @@
         <header class="topbar">
             <div>
                 <p class="eyebrow">SECURE AI EXECUTION PLATFORM</p>
-                <h1>Operations Dashboard</h1>
-                <p class="subtitle">Policy enforcement, Human-in-the-Loop and event-driven execution.</p>
+                <h1>Operations Command Center</h1>
+                <p class="subtitle">Governed AI agents, human approvals, event-driven execution and auditability.</p>
             </div>
             <div class="topbar-actions">
                 <div class="user-identity" id="userIdentity" hidden>
@@ -69,12 +70,16 @@
             </article>
         </section>
 
-        <section class="dashboard-grid">
-            <article class="panel span-2" id="agents">
+        <section class="command-center-grid">
+            <article class="panel agents-overview" id="agents">
                 <div class="panel-header">
-                    <div><p class="eyebrow">AGENT CONTROL</p><h2>Ask Agent</h2></div>
+                    <div>
+                        <p class="eyebrow">AI AGENT CONTROL</p>
+                        <h2 class="command-panel-title">Agents</h2>
+                    </div>
                     <span class="badge secure">Backend controlled</span>
                 </div>
+
                 <form id="agentPromptForm" class="agent-prompt-form">
                     <div class="agent-form-row">
                         <label class="agent-field agent-name-field">Agent
@@ -90,30 +95,51 @@
                     </div>
                     <p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p>
                 </form>
+
+                <div class="agent-catalog" aria-label="Governed agent catalog">
+                    <div class="agent-catalog-card">
+                        <div class="agent-avatar">F</div>
+                        <div><strong>Fraud Agent</strong><span>Risk analysis · protected actions</span></div>
+                    </div>
+                    <div class="agent-catalog-card">
+                        <div class="agent-avatar">O</div>
+                        <div><strong>Operations Agent</strong><span>Operational analysis · controlled tools</span></div>
+                    </div>
+                </div>
+
                 <div class="control-strip">
-                    <span>Intent</span><b>→</b><span>Planner</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span>
+                    <span>Intent</span><b>→</b><span>AI Agent</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span>
                 </div>
             </article>
 
-            <article class="panel" id="approvals">
+            <article class="panel governance-overview" id="approvals">
                 <div class="panel-header">
-                    <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Approvals</h2></div>
+                    <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2 class="command-panel-title">Pending Approvals</h2></div>
+                    <span class="badge next">Protected</span>
                 </div>
+
+                <div class="governance-strip">
+                    <div class="governance-chip"><span>Policy</span><strong>Authoritative</strong></div>
+                    <div class="governance-chip"><span>Critical tools</span><strong>HITL</strong></div>
+                    <div class="governance-chip"><span>Audit</span><strong>Enabled</strong></div>
+                </div>
+
                 <p class="form-message" id="approvalFeedback"></p>
                 <div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div>
             </article>
 
-            <article class="panel span-2" id="events">
+            <article class="panel events-overview" id="events">
                 <div class="panel-header">
-                    <div><p class="eyebrow">EVENT-DRIVEN CORE</p><h2>Recent execution activity</h2></div>
+                    <div><p class="eyebrow">EVENT STREAM</p><h2 class="command-panel-title">Recent Events</h2></div>
                     <span class="badge">Kafka + Outbox</span>
                 </div>
                 <div id="executionList" class="activity-list"><div class="empty-state">Authenticate to load execution data.</div></div>
             </article>
 
-            <article class="panel login-panel">
+            <article class="panel session-overview login-panel">
                 <div class="panel-header">
-                    <div><p class="eyebrow">LOCAL LAB</p><h2>API Session</h2></div>
+                    <div><p class="eyebrow">ACCESS CONTROL</p><h2 class="command-panel-title">API Session</h2></div>
+                    <span class="badge secure">JWT</span>
                 </div>
                 <form id="loginForm">
                     <label>Username<input id="username" value="analyst" autocomplete="username"></label>
@@ -130,9 +156,9 @@
                 <p class="form-message" id="authMessage">Use a local development user.</p>
             </article>
 
-            <article class="panel span-2 execution-inspector" id="executionInspector">
+            <article class="panel execution-inspector" id="executionInspector">
                 <div class="panel-header">
-                    <div><p class="eyebrow">GOVERNED EXECUTION</p><h2>Execution Inspector</h2></div>
+                    <div><p class="eyebrow">GOVERNED EXECUTION</p><h2 class="command-panel-title">Execution Inspector</h2></div>
                     <span class="badge secure">Least privilege</span>
                 </div>
                 <div class="inspector-grid">
@@ -164,18 +190,20 @@
 
         <section class="panel architecture-panel" id="architecture">
             <div class="panel-header">
-                <div><p class="eyebrow">GOVERNED EXECUTION</p><h2>SecureAgent Hub flow</h2></div>
+                <div><p class="eyebrow">ENTERPRISE GOVERNANCE FLOW</p><h2 class="command-panel-title">SecureAgent Hub Architecture</h2></div>
                 <span class="badge next">v1.3</span>
             </div>
             <div class="architecture-flow">
-                <div class="flow-node">User Intent</div><span>→</span>
-                <div class="flow-node accent">Spring AI / Planner</div><span>→</span>
-                <div class="flow-node">Policy Engine</div><span>→</span>
-                <div class="flow-node">Human Approval</div><span>→</span>
-                <div class="flow-node">Tool Execution</div><span>→</span>
-                <div class="flow-node">Audit + Kafka</div>
+                <div class="flow-node"><strong>User</strong><small>Intent</small></div><span>→</span>
+                <div class="flow-node security-node"><strong>Spring Security</strong><small>JWT + RBAC</small></div><span>→</span>
+                <div class="flow-node ai-node"><strong>AI Agent</strong><small>Spring AI / Planner</small></div><span>→</span>
+                <div class="flow-node security-node"><strong>Policy Engine</strong><small>Authorize</small></div><span>→</span>
+                <div class="flow-node"><strong>Tool Calling</strong><small>Proposal only</small></div><span>→</span>
+                <div class="flow-node human-node"><strong>Human Approval</strong><small>Critical actions</small></div><span>→</span>
+                <div class="flow-node"><strong>Execution</strong><small>Backend controlled</small></div><span>→</span>
+                <div class="flow-node observability-node"><strong>Observability</strong><small>Audit · Kafka · Metrics</small></div>
             </div>
-            <p class="architecture-note">The LLM may interpret intent. The backend controls execution.</p>
+            <p class="architecture-note"><strong>The LLM interprets.</strong> The Policy Engine authorizes. The backend executes.</p>
         </section>
     </main>
 </div>
