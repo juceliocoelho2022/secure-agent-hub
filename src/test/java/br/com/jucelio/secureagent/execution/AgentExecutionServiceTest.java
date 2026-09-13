@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class AgentExecutionServiceTest {
@@ -52,7 +54,7 @@ class AgentExecutionServiceTest {
         assertThat(result.getStatus()).isEqualTo(ExecutionStatus.WAITING_APPROVAL);
         assertThat(result.getRequestedTool()).isEqualTo("blockCard");
         verify(approvalRepository).save(any());
-        verify(domainEventService, atLeastOnce()).record(any(), any(), any(), any(), any());
+        verify(domainEventService, atLeastOnce()).append(any(), anyString(), anyMap());
     }
 
     @Test
@@ -63,6 +65,6 @@ class AgentExecutionServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
         assertThat(result.getResult()).contains("Transaction retrieved");
-        verify(domainEventService, atLeastOnce()).record(any(), any(), any(), any(), any());
+        verify(domainEventService, atLeastOnce()).append(any(), anyString(), anyMap());
     }
 }
