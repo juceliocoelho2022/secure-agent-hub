@@ -25,6 +25,7 @@ spring:
     consumer:
       group-id: ${KAFKA_GROUP_ID:secure-agent-hub}
       auto-offset-reset: earliest
+      enable-auto-commit: false
 
 server:
   port: ${PORT:8080}
@@ -39,6 +40,7 @@ app:
       refresh-ttl: ${JWT_REFRESH_TTL:7d}
   events:
     topic: ${AGENT_EVENTS_TOPIC:secure-agent.events}
+    dlt-topic: ${AGENT_EVENTS_DLT_TOPIC:secure-agent.events.DLT}
     outbox-poll-delay-ms: ${OUTBOX_POLL_DELAY_MS:1000}
 
 management:
