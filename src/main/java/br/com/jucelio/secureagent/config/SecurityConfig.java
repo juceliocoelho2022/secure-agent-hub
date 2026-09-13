@@ -1,8 +1,9 @@
 package br.com.jucelio.secureagent.config;
 
 import br.com.jucelio.secureagent.auth.DatabaseAuthenticationProvider;
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.JWKSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,7 +65,11 @@ public class SecurityConfig {
 
     @Bean
     JwtEncoder jwtEncoder(SecretKey key) {
-        return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(key));
+        OctetSequenceKey jwk = new OctetSequenceKey.Builder(key)
+                .algorithm(com.nimbusds.jose.JWSAlgorithm.HS256)
+                .keyID("secure-agent-hub-hs256")
+                .build();
+        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
     }
 
     @Bean
