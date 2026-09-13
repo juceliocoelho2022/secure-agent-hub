@@ -17,6 +17,7 @@ class DashboardResourceTest {
         assertTrue(html.contains("id=\"agentPromptForm\""), "dashboard should expose an Ask Agent form");
         assertTrue(html.contains("id=\"agentPrompt\""), "dashboard should expose the agent prompt input");
         assertTrue(html.contains("id=\"executionInspector\""), "dashboard should expose an execution inspector");
+        assertTrue(html.contains("id=\"decisionSummary\""), "dashboard should expose a decision summary");
         assertTrue(html.contains("id=\"executionTimeline\""), "dashboard should expose an operational execution timeline");
     }
 
@@ -29,6 +30,19 @@ class DashboardResourceTest {
         assertTrue(javascript.contains("/approve"), "dashboard should support approval actions");
         assertTrue(javascript.contains("/reject"), "dashboard should support rejection actions");
         assertTrue(javascript.contains("authorities"), "dashboard should render roles returned by /api/v1/users/me");
+    }
+
+    @Test
+    void dashboardRendersDecisionStateAndCanonicalLifecycle() throws IOException {
+        String javascript = resource("/static/assets/dashboard.js");
+
+        assertTrue(javascript.contains("Policy decision"), "inspector should explain the policy decision");
+        assertTrue(javascript.contains("Human decision"), "inspector should explain the human decision");
+        assertTrue(javascript.contains("POLICY_EVALUATED"), "timeline should include the policy evaluation stage");
+        assertTrue(javascript.contains("HUMAN_APPROVED"), "timeline should include the human approval stage");
+        assertTrue(javascript.contains("TOOL_EXECUTED"), "timeline should include the controlled tool execution stage");
+        assertTrue(javascript.contains("COMPLETED"), "timeline should include the terminal completed stage");
+        assertTrue(javascript.contains("timeline-item future"), "future lifecycle stages should be visibly distinguished");
     }
 
     private String resource(String path) throws IOException {
