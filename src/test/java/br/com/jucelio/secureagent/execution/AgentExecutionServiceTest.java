@@ -11,9 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class AgentExecutionServiceTest {
@@ -54,6 +52,11 @@ class AgentExecutionServiceTest {
         assertThat(result.getStatus()).isEqualTo(ExecutionStatus.WAITING_APPROVAL);
         assertThat(result.getRequestedTool()).isEqualTo("blockCard");
         verify(approvalRepository).save(any());
+        verify(auditService).record(
+                eq(result.getEntityId()),
+                eq("AI_AGENT"),
+                eq("TOOL_PLANNED"),
+                contains("source=RULE_BASED"));
         verify(domainEventService, atLeastOnce()).append(any(), anyString(), anyMap());
     }
 
