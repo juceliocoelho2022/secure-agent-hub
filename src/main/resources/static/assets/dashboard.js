@@ -28,7 +28,18 @@ const agentPrompt = document.getElementById('agentPrompt');
 const agentMessage = document.getElementById('agentMessage');
 const agentSubmitButton = document.getElementById('agentSubmitButton');
 const executionInspectorSummary = document.getElementById('executionInspectorSummary');
+const decisionSummary = document.getElementById('decisionSummary');
 const executionTimeline = document.getElementById('executionTimeline');
+
+const governedLifecycle = [
+    'EXECUTION_CREATED',
+    'TOOL_PLANNED',
+    'POLICY_EVALUATED',
+    'HUMAN_APPROVAL_REQUIRED',
+    'HUMAN_APPROVED',
+    'TOOL_EXECUTED',
+    'COMPLETED'
+];
 
 async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -144,6 +155,7 @@ function renderSignedOut() {
     approvalList.innerHTML = '<div class="empty-state">Authenticate to load approval data.</div>';
     approvalFeedback.textContent = '';
     executionInspectorSummary.innerHTML = '<div class="empty-state">Authenticate to inspect an execution.</div>';
+    decisionSummary.innerHTML = '<div class="decision-summary-title">Decision Summary</div><div class="empty-state">Authenticate to inspect policy decisions.</div>';
     executionTimeline.innerHTML = '<div class="empty-state">Authenticate to load timeline data.</div>';
     userIdentity.hidden = true;
     loginForm.hidden = false;
@@ -241,7 +253,7 @@ function renderExecutions(executions) {
             <button class="activity-item execution-row${selected}" data-execution-id="${escapeHtml(item.id)}" type="button">
                 <div class="activity-main">
                     <strong>${escapeHtml(item.agent || 'agent')}</strong>
-                    <div class="activity-meta">${escapeHtml(item.id || 'unknown')}${escapeHtml(tool)}</div>
+                    <div class="activity-meta">${escapeHtml(shortId(item.id))}${escapeHtml(tool)}</div>
                     ${detail ? `<div class="activity-detail">${escapeHtml(detail)}</div>` : ''}
                 </div>
                 <span class="badge ${statusClass(item.status)}">${escapeHtml(item.status || 'UNKNOWN')}</span>
@@ -257,9 +269,13 @@ function renderApprovals(approvals) {
 
     approvalList.innerHTML = approvals.slice(0, 5).map(item => `
         <div class="approval-item approval-card">
-            <div>
-                <strong>${escapeHtml(item.toolName || 'critical tool')}</strong>
-                <div class="activity-meta">${escapeHtml(item.reason || item.executionId || item.id)}</div>
+            <div class="approval-context">
+                <div class="approval-title-row">
+                    <strong>${escapeHtml(item.toolName || 'critical tool')}</strong>
+                    <span class="approval-severity">PROTECTED</span>
+                </div>
+                <div class="activity-meta">Execution ${escapeHtml(shortId(item.executionId || item.id))} · ${escapeHtml(formatTime(item.requestedAt))}</div>
+                <div class="approval-reason">${escapeHtml(item.reason || 'Critical operation requires human approval')}</div>
             </div>
             <div class="approval-actions">
                 <button class="approval-button approve" data-action="approve" data-id="${escapeHtml(item.id)}" type="button">Approve</button>
@@ -272,13 +288,14 @@ async function inspectExecution(item) {
     state.selectedExecutionId = item.id;
     renderExecutions(state.executions);
     executionInspectorSummary.innerHTML = `
-        <div class="inspector-kv"><span>Execution</span><strong>${escapeHtml(item.id)}</strong></div>
+        <div class="inspector-kv"><span>Execution</span><strong>${escapeHtml(shortId(item.id))}</strong></div>
         <div class="inspector-kv"><span>Agent</span><strong>${escapeHtml(item.agent || '—')}</strong></div>
-        <div class="inspector-kv"><span>Status</span><strong>${escapeHtml(item.status || 'UNKNOWN')}</strong></div>
+        <div class="inspector-kv"><span>Status</span><strong class="status-text ${statusClass(item.status)}">${escapeHtml(item.status || 'UNKNOWN')}</strong></div>
         <div class="inspector-kv"><span>Requested tool</span><strong>${escapeHtml(item.requestedTool || 'No critical tool')}</strong></div>
         <div class="inspector-block"><span>Intent</span><p>${escapeHtml(item.prompt || '—')}</p></div>
         <div class="inspector-block"><span>Result</span><p>${escapeHtml(item.result || 'Awaiting final result')}</p></div>`;
 
+    renderDecisionSummary(item, []);
     await loadTimeline(item.id);
 }
 
@@ -291,26 +308,125 @@ async function loadTimeline(executionId) {
     executionTimeline.innerHTML = '<div class="empty-state">Loading governed lifecycle...</div>';
     try {
         const timeline = await api(`/api/v1/agents/executions/${encodeURIComponent(executionId)}/timeline`);
-        renderTimeline(Array.isArray(timeline) ? timeline : []);
+        const items = Array.isArray(timeline) ? timeline : [];
+        renderTimeline(items);
+        const selected = state.executions.find(item => item.id === executionId);
+        if (selected) renderDecisionSummary(selected, items);
     } catch (error) {
         executionTimeline.innerHTML = `<div class="empty-state">Unable to load timeline: ${escapeHtml(error.message)}</div>`;
     }
 }
 
+function renderDecisionSummary(execution, timeline) {
+    const actions = new Set(timeline.map(item => String(item.action || '').toUpperCase()));
+    const status = String(execution.status || '').toUpperCase();
+    const approvalRequired = status.includes('APPROVAL') || actions.has('HUMAN_APPROVAL_REQUIRED') || actions.has('HUMAN_APPROVED') || actions.has('HUMAN_REJECTED');
+    const rejected = status.includes('REJECTED') || actions.has('HUMAN_REJECTED');
+    const approved = actions.has('HUMAN_APPROVED') || actions.has('APPROVED_TOOL_EXECUTED');
+    const policyDecision = status.includes('DENIED') ? 'DENY' : approvalRequired ? 'REQUIRE_APPROVAL' : 'ALLOW';
+    const humanDecision = rejected ? 'REJECTED' : approved ? 'APPROVED' : approvalRequired ? 'PENDING' : 'NOT_REQUIRED';
+    const currentStage = deriveCurrentStage(status, actions);
+
+    decisionSummary.innerHTML = `
+        <div class="decision-summary-title">Decision Summary</div>
+        <div class="decision-grid">
+            <div><span>Policy decision</span><strong class="decision-value ${decisionClass(policyDecision)}">${policyDecision}</strong></div>
+            <div><span>Human decision</span><strong class="decision-value ${decisionClass(humanDecision)}">${humanDecision}</strong></div>
+            <div><span>Governed tool</span><strong>${escapeHtml(execution.requestedTool || 'None')}</strong></div>
+            <div><span>Current stage</span><strong>${escapeHtml(currentStage)}</strong></div>
+        </div>`;
+}
+
+function deriveCurrentStage(status, actions) {
+    if (status.includes('REJECTED') || actions.has('HUMAN_REJECTED')) return 'REJECTED';
+    if (status.includes('DENIED')) return 'DENIED';
+    if (status.includes('COMPLETED')) return 'COMPLETED';
+    if (actions.has('HUMAN_APPROVED')) return 'TOOL_EXECUTION';
+    if (status.includes('APPROVAL') || actions.has('HUMAN_APPROVAL_REQUIRED')) return 'HUMAN_APPROVAL';
+    if (actions.has('TOOL_PLANNED')) return 'POLICY_EVALUATION';
+    return 'EXECUTION';
+}
+
 function renderTimeline(items) {
-    if (!items.length) {
-        executionTimeline.innerHTML = '<div class="empty-state">No operational events found.</div>';
+    const normalized = items.map(item => ({ ...item, normalizedAction: String(item.action || '').toUpperCase() }));
+    const byAction = new Map(normalized.map(item => [item.normalizedAction, item]));
+    const selected = state.executions.find(item => item.id === state.selectedExecutionId) || {};
+    const status = String(selected.status || '').toUpperCase();
+
+    if (status.includes('REJECTED') || byAction.has('HUMAN_REJECTED')) {
+        const rejectedLifecycle = ['EXECUTION_CREATED', 'TOOL_PLANNED', 'POLICY_EVALUATED', 'HUMAN_APPROVAL_REQUIRED', 'HUMAN_REJECTED', 'REJECTED'];
+        executionTimeline.innerHTML = renderLifecycle(rejectedLifecycle, byAction, selected);
         return;
     }
 
-    executionTimeline.innerHTML = items.map(item => `
-        <div class="timeline-item">
-            <span class="timeline-dot"></span>
-            <div>
-                <strong>${escapeHtml(item.action || 'EVENT')}</strong>
-                <div class="activity-meta">${escapeHtml(item.actor || 'SYSTEM')} · ${escapeHtml(formatInstant(item.createdAt))}</div>
-            </div>
-        </div>`).join('');
+    executionTimeline.innerHTML = renderLifecycle(governedLifecycle, byAction, selected);
+}
+
+function renderLifecycle(stages, byAction, execution) {
+    const status = String(execution.status || '').toUpperCase();
+    const approvalRequired = status.includes('APPROVAL') || byAction.has('HUMAN_APPROVAL_REQUIRED') || byAction.has('HUMAN_APPROVED');
+    const policyReached = byAction.has('TOOL_PLANNED') || approvalRequired || status.includes('COMPLETED') || status.includes('DENIED');
+
+    return stages.map((stage, index) => {
+        const actual = byAction.get(stage) || lifecycleAlias(stage, byAction);
+        const derivedPolicy = stage === 'POLICY_EVALUATED' && policyReached && !actual;
+        const derivedTerminal = stage === 'COMPLETED' && status.includes('COMPLETED') && !actual;
+        const reached = Boolean(actual || derivedPolicy || derivedTerminal);
+        const future = !reached;
+        const current = isCurrentStage(stage, status, byAction, stages, index);
+        const stateClass = future ? 'future' : current ? 'current' : 'complete';
+        const actor = actual?.actor || (derivedPolicy ? 'POLICY_ENGINE' : derivedTerminal ? 'SYSTEM' : 'Pending');
+        const time = actual?.createdAt ? formatInstant(actual.createdAt) : reached ? 'Derived from governed state' : 'Awaiting previous stage';
+
+        return `
+            <div class="timeline-item ${stateClass}">
+                <span class="timeline-dot"></span>
+                <div>
+                    <strong>${escapeHtml(stage)}</strong>
+                    <div class="activity-meta">${escapeHtml(actor)} · ${escapeHtml(time)}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+function lifecycleAlias(stage, byAction) {
+    if (stage === 'TOOL_EXECUTED') return byAction.get('APPROVED_TOOL_EXECUTED');
+    if (stage === 'COMPLETED') return byAction.get('EXECUTION_COMPLETED');
+    if (stage === 'REJECTED') return byAction.get('APPROVAL_REJECTED');
+    return null;
+}
+
+function isCurrentStage(stage, status, byAction, stages, index) {
+    if (status.includes('COMPLETED')) return stage === 'COMPLETED';
+    if (status.includes('REJECTED')) return stage === 'REJECTED';
+    if (status.includes('DENIED')) return stage === 'POLICY_EVALUATED';
+    if (status.includes('APPROVAL')) return stage === 'HUMAN_APPROVAL_REQUIRED';
+    if (byAction.has('HUMAN_APPROVED')) return stage === 'TOOL_EXECUTED';
+
+    const reachedIndexes = stages
+        .map((name, stageIndex) => byAction.has(name) || lifecycleAlias(name, byAction) ? stageIndex : -1)
+        .filter(stageIndex => stageIndex >= 0);
+    const lastReached = reachedIndexes.length ? Math.max(...reachedIndexes) : 0;
+    return index === lastReached;
+}
+
+function decisionClass(value) {
+    const normalized = String(value || '').toUpperCase();
+    if (normalized === 'ALLOW' || normalized === 'APPROVED' || normalized === 'NOT_REQUIRED') return 'positive';
+    if (normalized === 'REQUIRE_APPROVAL' || normalized === 'PENDING') return 'warning';
+    if (normalized === 'DENY' || normalized === 'REJECTED') return 'negative';
+    return '';
+}
+
+function shortId(value) {
+    const text = String(value || 'unknown');
+    return text.length > 14 ? `${text.slice(0, 8)}…${text.slice(-4)}` : text;
+}
+
+function formatTime(value) {
+    if (!value) return 'time unavailable';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString('pt-BR');
 }
 
 function formatInstant(value) {
