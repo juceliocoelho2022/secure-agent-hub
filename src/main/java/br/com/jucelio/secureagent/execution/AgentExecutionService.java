@@ -12,6 +12,7 @@ import br.com.jucelio.secureagent.tool.ToolExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -54,16 +55,37 @@ public class AgentExecutionService {
         execution.start();
 
         AgentPlan plan = planner.plan(request.prompt());
+        execution.recordPlanning(plan);
+
+        String usageDetails = plan.usage().available()
+                ? " usage=prompt:" + plan.usage().promptTokens()
+                    + ",completion:" + plan.usage().completionTokens()
+                    + ",total:" + plan.usage().totalTokens()
+                : "";
+
         auditService.record(
                 execution.getEntityId(),
                 "AI_AGENT",
                 "TOOL_PLANNED",
-                plan.toolName() + " - " + plan.explanation() + " source=" + plan.source().name());
-        domainEventService.append(execution.getEntityId(), "agent.tool.planned", Map.of(
-                "executionId", execution.getEntityId().toString(),
-                "tool", plan.toolName(),
-                "explanation", plan.explanation(),
-                "source", plan.source().name()));
+                plan.toolName() + " - " + plan.explanation()
+                        + " source=" + plan.source().name()
+                        + usageDetails);
+
+        Map<String, Object> plannedEvent = new HashMap<>();
+        plannedEvent.put("executionId", execution.getEntityId().toString());
+        plannedEvent.put("tool", plan.toolName());
+        plannedEvent.put("explanation", plan.explanation());
+        plannedEvent.put("source", plan.source().name());
+        if (plan.usage().promptTokens() != null) {
+            plannedEvent.put("promptTokens", plan.usage().promptTokens());
+        }
+        if (plan.usage().completionTokens() != null) {
+            plannedEvent.put("completionTokens", plan.usage().completionTokens());
+        }
+        if (plan.usage().totalTokens() != null) {
+            plannedEvent.put("totalTokens", plan.usage().totalTokens());
+        }
+        domainEventService.append(execution.getEntityId(), "agent.tool.planned", plannedEvent);
 
         PolicyDecision decision = policyService.evaluate(plan.toolName());
         if (!decision.allowed()) {
