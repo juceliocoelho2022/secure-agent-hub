@@ -25,14 +25,23 @@ public class DevUserBootstrap implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        createIfMissing("analyst", "analyst123", "ANALYST");
-        createIfMissing("operator", "operator123", "OPERATOR");
-        createIfMissing("auditor", "auditor123", "AUDITOR");
-        createIfMissing("admin", "admin123", "ADMIN");
+        ensureDevUser("analyst", "analyst123", "ANALYST");
+        ensureDevUser("operator", "operator123", "OPERATOR");
+        ensureDevUser("auditor", "auditor123", "AUDITOR");
+        ensureDevUser("admin", "admin123", "ADMIN");
     }
 
-    private void createIfMissing(String username, String password, String roleName) {
-        if (users.existsByUsername(username)) return;
+    private void ensureDevUser(String username, String password, String roleName) {
+        var existing = users.findByUsername(username);
+        if (existing.isPresent()) {
+            AppUser user = existing.get();
+            if (!encoder.matches(password, user.getPasswordHash())) {
+                user.resetPasswordHash(encoder.encode(password));
+                users.save(user);
+            }
+            return;
+        }
+
         Role role = roles.findByName(roleName).orElseThrow();
         users.save(new AppUser(username, encoder.encode(password), Set.of(role)));
     }
