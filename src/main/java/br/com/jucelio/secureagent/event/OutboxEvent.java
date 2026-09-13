@@ -41,12 +41,21 @@ public class OutboxEvent {
     protected OutboxEvent() {}
 
     public OutboxEvent(String aggregateType, UUID aggregateId, String eventType, String payload) {
-        this.id = UUID.randomUUID();
+        this(UUID.randomUUID(), aggregateType, aggregateId, eventType, payload, Instant.now());
+    }
+
+    public OutboxEvent(UUID id,
+                       String aggregateType,
+                       UUID aggregateId,
+                       String eventType,
+                       String payload,
+                       Instant createdAt) {
+        this.id = id;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
         this.payload = payload;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
         this.attempts = 0;
     }
 
