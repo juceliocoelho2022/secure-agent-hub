@@ -12,10 +12,7 @@
     <aside class="sidebar">
         <div class="brand">
             <div class="brand-mark">SA</div>
-            <div>
-                <strong>SecureAgent</strong>
-                <span>Hub</span>
-            </div>
+            <div><strong>SecureAgent</strong><span>Hub</span></div>
         </div>
 
         <nav class="nav">
@@ -28,10 +25,7 @@
 
         <div class="sidebar-footer">
             <div class="environment-dot"></div>
-            <div>
-                <small>Environment</small>
-                <strong>Local Development</strong>
-            </div>
+            <div><small>Environment</small><strong>Local Development</strong></div>
         </div>
     </aside>
 
@@ -43,6 +37,10 @@
                 <p class="subtitle">Policy enforcement, Human-in-the-Loop and event-driven execution.</p>
             </div>
             <div class="topbar-actions">
+                <div class="user-identity" id="userIdentity" hidden>
+                    <strong id="currentUsername">—</strong>
+                    <span id="currentRoles">—</span>
+                </div>
                 <div class="connection-pill" id="connectionPill">
                     <span class="status-dot"></span>
                     <span id="connectionText">Checking API</span>
@@ -54,106 +52,88 @@
         <section class="metrics-grid" id="overview">
             <article class="metric-card">
                 <div class="metric-header"><span>Agent executions</span><span class="metric-icon">◉</span></div>
-                <strong id="executionCount">—</strong>
-                <small>Observed executions</small>
+                <strong id="executionCount">—</strong><small>Observed executions</small>
             </article>
             <article class="metric-card">
                 <div class="metric-header"><span>Pending approvals</span><span class="metric-icon">⌛</span></div>
-                <strong id="approvalCount">—</strong>
-                <small>Human review queue</small>
+                <strong id="approvalCount">—</strong><small>Human review queue</small>
             </article>
             <article class="metric-card">
                 <div class="metric-header"><span>Security model</span><span class="metric-icon">◆</span></div>
-                <strong>RBAC</strong>
-                <small>JWT + Policy Engine</small>
+                <strong>RBAC</strong><small>JWT + Policy Engine</small>
             </article>
             <article class="metric-card">
                 <div class="metric-header"><span>Event delivery</span><span class="metric-icon">↯</span></div>
-                <strong>At-least-once</strong>
-                <small>Outbox + idempotent consumer</small>
+                <strong>At-least-once</strong><small>Outbox + idempotent consumer</small>
             </article>
         </section>
 
         <section class="dashboard-grid">
             <article class="panel span-2" id="agents">
                 <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">AGENT CONTROL</p>
-                        <h2>Active agent architecture</h2>
-                    </div>
+                    <div><p class="eyebrow">AGENT CONTROL</p><h2>Ask Agent</h2></div>
                     <span class="badge secure">Backend controlled</span>
                 </div>
-
-                <div class="agent-list">
-                    <div class="agent-row">
-                        <div class="agent-avatar">F</div>
-                        <div class="agent-info"><strong>Fraud Agent</strong><span>Risk analysis and card-block proposal</span></div>
-                        <span class="badge live">Active</span>
+                <form id="agentPromptForm" class="agent-prompt-form">
+                    <div class="agent-form-row">
+                        <label class="agent-field agent-name-field">Agent
+                            <select id="agentName">
+                                <option value="fraud-agent">Fraud Agent</option>
+                                <option value="operations-agent">Operations Agent</option>
+                            </select>
+                        </label>
+                        <label class="agent-field prompt-field">Intent
+                            <input id="agentPrompt" maxlength="2000" placeholder="Ex.: analise a transação 123 e bloqueie o cartão se houver alto risco" required>
+                        </label>
+                        <button class="primary-button agent-submit" id="agentSubmitButton" type="submit">Execute</button>
                     </div>
-                    <div class="agent-row">
-                        <div class="agent-avatar">P</div>
-                        <div class="agent-info"><strong>Policy Engine</strong><span>ALLOW · REQUIRE_APPROVAL · DENY</span></div>
-                        <span class="badge secure">Enforced</span>
-                    </div>
-                    <div class="agent-row">
-                        <div class="agent-avatar">E</div>
-                        <div class="agent-info"><strong>Event Pipeline</strong><span>Outbox → Kafka → Consumer → DLT</span></div>
-                        <span class="badge live">Online</span>
-                    </div>
+                    <p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p>
+                </form>
+                <div class="control-strip">
+                    <span>Intent</span><b>→</b><span>Planner</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span>
                 </div>
             </article>
 
             <article class="panel" id="approvals">
                 <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">HUMAN-IN-THE-LOOP</p>
-                        <h2>Approvals</h2>
-                    </div>
+                    <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Approvals</h2></div>
                 </div>
-                <div id="approvalList" class="stack-list">
-                    <div class="empty-state">Authenticate to load approval data.</div>
-                </div>
+                <div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div>
             </article>
 
             <article class="panel span-2" id="events">
                 <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">EVENT-DRIVEN CORE</p>
-                        <h2>Recent execution activity</h2>
-                    </div>
+                    <div><p class="eyebrow">EVENT-DRIVEN CORE</p><h2>Recent execution activity</h2></div>
                     <span class="badge">Kafka + Outbox</span>
                 </div>
-                <div id="executionList" class="activity-list">
-                    <div class="empty-state">Authenticate to load execution data.</div>
-                </div>
+                <div id="executionList" class="activity-list"><div class="empty-state">Authenticate to load execution data.</div></div>
             </article>
 
             <article class="panel login-panel">
                 <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">LOCAL LAB</p>
-                        <h2>Connect to API</h2>
-                    </div>
+                    <div><p class="eyebrow">LOCAL LAB</p><h2>API Session</h2></div>
                 </div>
                 <form id="loginForm">
                     <label>Username<input id="username" value="analyst" autocomplete="username"></label>
-                    <label>Password<input id="password" type="password" value="analyst123" autocomplete="current-password"></label>
+                    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Local development password"></label>
                     <button class="primary-button" type="submit">Authenticate</button>
-                    <button class="link-button" id="logoutButton" type="button">Clear session</button>
                 </form>
+                <div id="sessionPanel" hidden>
+                    <div class="session-card">
+                        <strong id="sessionUsername">Authenticated user</strong>
+                        <span id="sessionRoles">ROLE</span>
+                    </div>
+                    <button class="link-button" id="logoutButton" type="button">Logout</button>
+                </div>
                 <p class="form-message" id="authMessage">Use a local development user.</p>
             </article>
         </section>
 
         <section class="panel architecture-panel" id="architecture">
             <div class="panel-header">
-                <div>
-                    <p class="eyebrow">GOVERNED EXECUTION</p>
-                    <h2>SecureAgent Hub flow</h2>
-                </div>
-                <span class="badge next">v1.3 ready</span>
+                <div><p class="eyebrow">GOVERNED EXECUTION</p><h2>SecureAgent Hub flow</h2></div>
+                <span class="badge next">v1.3</span>
             </div>
-
             <div class="architecture-flow">
                 <div class="flow-node">User Intent</div><span>→</span>
                 <div class="flow-node accent">Spring AI / Planner</div><span>→</span>
