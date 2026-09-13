@@ -59,6 +59,20 @@ class DashboardResourceTest {
         assertTrue(telemetry.contains("Provider usage: n/a"), "rule-based executions should not fabricate zero token usage");
     }
 
+    @Test
+    void dashboardUsesPortfolioCommandCenterLayout() throws IOException {
+        String html = resource("/static/dashboard.html");
+
+        assertTrue(html.contains("Operations Command Center"), "dashboard should use the portfolio command-center heading");
+        assertTrue(html.contains("class=\"command-center-grid\""), "dashboard should expose the command-center layout");
+        assertTrue(html.contains("class=\"panel agents-overview\""), "dashboard should expose an agents overview panel");
+        assertTrue(html.contains("class=\"panel governance-overview\""), "dashboard should expose a governance overview panel");
+        assertTrue(html.contains("class=\"panel events-overview\""), "dashboard should expose an events overview panel");
+        assertTrue(html.contains("/assets/dashboard-visual.css"), "dashboard should load the portfolio visual layer");
+        assertTrue(html.contains("AI Agent"), "architecture should visually identify the AI agent stage");
+        assertTrue(html.contains("Observability"), "architecture should visually identify the observability stage");
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getResourceAsStream(path)) {
             if (input == null) {
