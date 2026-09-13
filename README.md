@@ -2,6 +2,10 @@
 
 Projeto de portfólio para praticar **Java 21 + Spring Boot + segurança + agentes + Human-in-the-Loop + auditoria**.
 
+<p align="center">
+  <img src="docs/secure-agent-hub-dashboard.jpg" alt="SecureAgent Hub Dashboard" width="100%" />
+</p>
+
 ## Evolução incluída nesta versão
 
 A v1.1 substitui HTTP Basic/in-memory users por uma camada de segurança persistida:
