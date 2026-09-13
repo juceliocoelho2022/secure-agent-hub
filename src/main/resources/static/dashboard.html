@@ -99,6 +99,7 @@
                 <div class="panel-header">
                     <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Approvals</h2></div>
                 </div>
+                <p class="form-message" id="approvalFeedback"></p>
                 <div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div>
             </article>
 
@@ -127,6 +128,27 @@
                     <button class="link-button" id="logoutButton" type="button">Logout</button>
                 </div>
                 <p class="form-message" id="authMessage">Use a local development user.</p>
+            </article>
+
+            <article class="panel span-2 execution-inspector" id="executionInspector">
+                <div class="panel-header">
+                    <div><p class="eyebrow">GOVERNED EXECUTION</p><h2>Execution Inspector</h2></div>
+                    <span class="badge secure">Least privilege</span>
+                </div>
+                <div class="inspector-grid">
+                    <div id="executionInspectorSummary" class="inspector-summary">
+                        <div class="empty-state">Select an execution to inspect its governed lifecycle.</div>
+                    </div>
+                    <div>
+                        <div class="timeline-heading">
+                            <strong>Operational timeline</strong>
+                            <span>Sanitized view</span>
+                        </div>
+                        <div id="executionTimeline" class="execution-timeline">
+                            <div class="empty-state">Operator, Auditor or Admin role required to load timeline data.</div>
+                        </div>
+                    </div>
+                </div>
             </article>
         </section>
 
