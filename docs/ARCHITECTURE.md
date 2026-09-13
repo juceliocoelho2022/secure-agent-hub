@@ -21,18 +21,21 @@ flowchart LR
     TOOL --> SYS[APIs / DB / Serviços]
     TOOL --> AUD
     AG --> AUD
+    AG --> EVT[Domain Events]
+    EVT --> OUTBOX[(PostgreSQL Outbox)]
+    OUTBOX --> K[Kafka]
 ```
 
 ## Componentes
 
 ### Identity & Access
-- autenticação via JWT Bearer
-- refresh token rotacionado
-- RBAC com `ANALYST`, `OPERATOR`, `AUDITOR`, `ADMIN`
-- segregação entre leitura, execução, aprovação e auditoria
+- autenticação via JWT Bearer;
+- refresh token rotacionado;
+- RBAC com `ANALYST`, `OPERATOR`, `AUDITOR`, `ADMIN`;
+- segregação entre leitura, execução, aprovação e auditoria.
 
 ### Agent Planner
-Na v1.1, o planejamento é determinístico (`RuleBasedAgentPlanner`). Isso reduz risco enquanto a camada de controle é validada. Spring AI entra na v1.3.
+Na v1.2, o planejamento continua determinístico (`RuleBasedAgentPlanner`). Isso é intencional: identidade, autorização, políticas, Human-in-the-Loop e infraestrutura de eventos são consolidados antes da introdução do LLM. Spring AI entra na v1.3.
 
 ### Policy Engine
 Intercepta ações propostas pelo agente e decide entre:
@@ -40,43 +43,96 @@ Intercepta ações propostas pelo agente e decide entre:
 - exigir aprovação humana;
 - rejeitar a operação.
 
+O modelo de IA não recebe autoridade para ignorar essa decisão.
+
 ### Human-in-the-Loop
 Operações críticas ficam pendentes até decisão explícita de um operador autorizado.
 
 ### Audit Trail
-Eventos relevantes ficam registrados para rastreabilidade, investigação e compliance.
+Decisões e execuções relevantes ficam registradas para rastreabilidade, investigação e compliance.
 
-## Evolução arquitetural
+## v1.2 — Event-Driven Architecture
 
-### v1.2 — Event Driven
+A v1.2 está implementada e validada. Eventos de domínio são persistidos por Transactional Outbox e posteriormente publicados no Kafka.
+
 ```mermaid
 flowchart LR
-    APP[SecureAgent Hub] --> OUTBOX[(Transactional Outbox)]
-    OUTBOX --> PUB[Outbox Publisher]
-    PUB --> K[Kafka]
-    K --> CON[Consumers]
-    CON --> IDEM[(Idempotency Store)]
-    CON --> DLT[DLT]
+    SVC[AgentExecutionService] --> DES[DomainEventService]
+    DES --> OUTBOX[(outbox_events)]
+    OUTBOX --> PUB[OutboxPublisher]
+    PUB --> K[secure-agent.events]
+    K --> CON[DomainEventConsumer]
+    CON -->|sucesso| IDEM[(processed_events)]
+    CON -->|falha| RETRY[Retry + Exponential Backoff]
+    RETRY -->|esgotado| DLT[secure-agent.events.DLT]
 ```
 
-Objetivos:
-- transactional outbox;
-- Kafka;
-- retries com backoff;
-- DLT;
-- consumers idempotentes;
-- correlação de eventos.
+### DomainEventEnvelope
 
-### v1.3 — Spring AI
+Cada novo evento possui envelope padronizado com:
+- `eventId`;
+- `eventType`;
+- `aggregateType`;
+- `aggregateId`;
+- `occurredAt`;
+- `correlationId`;
+- `causationId`;
+- `schemaVersion`;
+- `payload`.
+
+O UUID do registro no outbox é o mesmo `eventId` enviado ao Kafka.
+
+### Transactional Outbox
+
+O evento é gravado em `outbox_events` junto ao fluxo transacional da aplicação. O `OutboxPublisher` publica registros pendentes no tópico `secure-agent.events` e marca `published_at` após confirmação do Kafka.
+
+Isso reduz o risco do dual-write entre banco e broker. A arquitetura continua assumindo **at-least-once delivery**.
+
+### Producer
+
+O producer Kafka utiliza `acks=all` e idempotência habilitada. Idempotência do producer reduz duplicações causadas por retries de publicação, mas não substitui a idempotência do consumer.
+
+### Idempotent Consumer
+
+`DomainEventConsumer` verifica `processed_events` por `eventId`. Eventos já processados são ignorados. Um evento concluído com sucesso é persistido no ledger de processamento.
+
+Eventos que falham não são marcados como processados.
+
+### Retry / DLT
+
+Falhas do consumer passam pelo `DefaultErrorHandler` com exponential backoff. Após o esgotamento da política de retry, `DeadLetterPublishingRecoverer` encaminha o registro original para `secure-agent.events.DLT`.
+
+A DLT protege o lado do consumer. Falhas permanentes do publisher do outbox ainda são um ponto separado de hardening.
+
+### Contratos
+
+O catálogo de eventos, envelope, semântica de entrega, idempotência, retry e DLT estão detalhados em [`EVENTS.md`](EVENTS.md).
+
+## v1.3 — Spring AI
+
 ```mermaid
 flowchart LR
     API --> AI[Spring AI ChatClient]
     AI --> LLM[LLM Provider]
     AI --> TC[Tool Calling]
     TC --> POL[Policy Engine]
+    POL -->|permitido| EXEC[Controlled Tool Execution]
+    POL -->|crítico| HITL[Human Approval]
 ```
 
-### v1.4 — RAG
+A v1.3 substituirá/estenderá o planner determinístico com interpretação via LLM, sem mover a autoridade de execução para o modelo.
+
+Objetivos:
+- ChatClient;
+- Tool Calling;
+- structured output;
+- provider abstraction;
+- métricas de token/custo;
+- integração obrigatória com Policy Engine;
+- Human-in-the-Loop para tools críticas.
+
+## v1.4 — RAG
+
 ```mermaid
 flowchart LR
     DOC[Documentos] --> EMB[Embeddings]
@@ -86,17 +142,21 @@ flowchart LR
     RET --> AI[Spring AI]
 ```
 
-### v1.5 — Observability
-- OpenTelemetry
-- Prometheus
-- Grafana
-- traces distribuídos
-- métricas de latência, falhas, aprovações e tool calls
+## v1.5 — Observability / AgentOps
+- OpenTelemetry;
+- Prometheus;
+- Grafana;
+- traces distribuídos;
+- métricas de latência, falhas, aprovações, tool calls e tokens;
+- SLOs e alertas.
 
 ## Decisões de engenharia
 
 1. **Security first** — nenhum agente executa ações sem passar pela camada de políticas.
 2. **Human control** — ações críticas suportam aprovação explícita.
 3. **Auditability** — decisões e execuções relevantes deixam trilha.
-4. **Incremental complexity** — IA real entra após identidade, autorização e políticas estarem sólidas.
-5. **Production-minded** — roadmap inclui mensageria, observabilidade, CI/CD e cloud.
+4. **At-least-once + idempotency** — duplicação é tratada como possibilidade arquitetural, não ignorada.
+5. **Transactional Outbox** — evita dependência de uma transação distribuída entre PostgreSQL e Kafka.
+6. **Failure isolation** — falhas permanentes do consumer são encaminhadas à DLT.
+7. **Incremental complexity** — IA real entra após identidade, autorização, políticas e mensageria estarem sólidas.
+8. **Production-minded** — roadmap inclui observabilidade, CI/CD, cloud e hardening para múltiplas réplicas.

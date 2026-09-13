@@ -41,6 +41,10 @@ public class AppUser {
         this.roles = new HashSet<>(roles);
     }
 
+    public void resetPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public UUID getId() { return id; }
     public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }

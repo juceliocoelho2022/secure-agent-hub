@@ -7,14 +7,26 @@ services:
       POSTGRES_USER: secureagent
       POSTGRES_PASSWORD: secureagent
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - secure_agent_pgdata:/var/lib/postgresql/data
+      - secure_agent_pgdata_v12:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U secureagent -d secure_agent_hub"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: secure-agent-kafka
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
 volumes:
-  secure_agent_pgdata:
+  secure_agent_pgdata_v12:

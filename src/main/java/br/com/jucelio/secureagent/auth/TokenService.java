@@ -3,6 +3,8 @@ package br.com.jucelio.secureagent.auth;
 import br.com.jucelio.secureagent.user.AppUser;
 import br.com.jucelio.secureagent.user.AppUserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -65,6 +67,7 @@ public class TokenService {
     private String createAccessToken(AppUser user) {
         Instant now = Instant.now();
         var authorities = user.getRoles().stream().map(r -> "ROLE_" + r.getName()).sorted().toList();
+
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("secure-agent-hub")
                 .issuedAt(now)
@@ -72,7 +75,12 @@ public class TokenService {
                 .subject(user.getUsername())
                 .claim("authorities", authorities)
                 .build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+
+        JwsHeader headers = JwsHeader.with(MacAlgorithm.HS256)
+                .keyId("secure-agent-hub-hs256")
+                .build();
+
+        return jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
     }
 
     private static String sha256(String value) {
