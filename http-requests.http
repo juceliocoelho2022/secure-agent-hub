@@ -1,0 +1,42 @@
+### Login
+POST http://localhost:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "analyst",
+  "password": "analyst123"
+}
+
+### Copie o accessToken para a variável abaixo
+@token = COLE_O_ACCESS_TOKEN
+@refresh = COLE_O_REFRESH_TOKEN
+
+### Perfil atual
+GET http://localhost:8080/api/v1/users/me
+Authorization: Bearer {{token}}
+
+### Criar execução
+POST http://localhost:8080/api/v1/agents/executions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "agent": "fraud-agent",
+  "prompt": "Analise possível fraude e bloqueie o cartão"
+}
+
+### Refresh token
+POST http://localhost:8080/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}
+
+### Logout / revogar refresh token
+POST http://localhost:8080/api/v1/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}

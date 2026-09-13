@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: secure-agent-hub
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/secure_agent_hub}
+    username: ${DB_USER:secureagent}
+    password: ${DB_PASSWORD:secureagent}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  bootstrap:
+    dev-users: ${BOOTSTRAP_DEV_USERS:true}
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-me-secure-agent-hub-dev-secret-32bytes-minimum}
+      access-ttl: ${JWT_ACCESS_TTL:15m}
+      refresh-ttl: ${JWT_REFRESH_TTL:7d}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
