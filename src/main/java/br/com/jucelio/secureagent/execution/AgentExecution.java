@@ -1,6 +1,8 @@
 package br.com.jucelio.secureagent.execution;
 
 import br.com.jucelio.secureagent.common.BaseEntity;
+import br.com.jucelio.secureagent.tool.AgentPlan;
+import br.com.jucelio.secureagent.tool.PlannerSource;
 import jakarta.persistence.*;
 
 @Entity
@@ -27,6 +29,19 @@ public class AgentExecution extends BaseEntity {
     @Column(length = 4000)
     private String result;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "planner_source", length = 32)
+    private PlannerSource plannerSource;
+
+    @Column(name = "prompt_tokens")
+    private Integer promptTokens;
+
+    @Column(name = "completion_tokens")
+    private Integer completionTokens;
+
+    @Column(name = "total_tokens")
+    private Integer totalTokens;
+
     protected AgentExecution() {}
 
     public AgentExecution(String agentName, String prompt) {
@@ -43,8 +58,20 @@ public class AgentExecution extends BaseEntity {
     public ExecutionStatus getStatus() { return status; }
     public String getRequestedTool() { return requestedTool; }
     public String getResult() { return result; }
+    public PlannerSource getPlannerSource() { return plannerSource; }
+    public Integer getPromptTokens() { return promptTokens; }
+    public Integer getCompletionTokens() { return completionTokens; }
+    public Integer getTotalTokens() { return totalTokens; }
 
     public void start() { this.status = ExecutionStatus.RUNNING; }
+
+    public void recordPlanning(AgentPlan plan) {
+        this.plannerSource = plan.source();
+        this.promptTokens = plan.usage().promptTokens();
+        this.completionTokens = plan.usage().completionTokens();
+        this.totalTokens = plan.usage().totalTokens();
+    }
+
     public void waitForApproval(String requestedTool) {
         this.requestedTool = requestedTool;
         this.status = ExecutionStatus.WAITING_APPROVAL;
