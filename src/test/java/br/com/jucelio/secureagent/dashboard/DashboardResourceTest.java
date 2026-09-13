@@ -48,14 +48,15 @@ class DashboardResourceTest {
     @Test
     void dashboardInspectorShowsPlannerAndProviderUsageWithoutFabricatingTokens() throws IOException {
         String html = resource("/static/dashboard.html");
-        String javascript = resource("/static/assets/dashboard.js");
+        String telemetry = resource("/static/assets/dashboard-telemetry.js");
 
         assertTrue(html.contains("id=\"plannerTelemetry\""), "inspector should expose planner telemetry");
-        assertTrue(javascript.contains("plannerSource"), "dashboard should render the planner source returned by the API");
-        assertTrue(javascript.contains("promptTokens"), "dashboard should render prompt token usage when available");
-        assertTrue(javascript.contains("completionTokens"), "dashboard should render completion token usage when available");
-        assertTrue(javascript.contains("totalTokens"), "dashboard should render total token usage when available");
-        assertTrue(javascript.contains("Provider usage: n/a"), "rule-based executions should not fabricate zero token usage");
+        assertTrue(html.contains("/assets/dashboard-telemetry.js"), "dashboard should load the telemetry renderer");
+        assertTrue(telemetry.contains("plannerSource"), "dashboard should render the planner source returned by the API");
+        assertTrue(telemetry.contains("promptTokens"), "dashboard should render prompt token usage when available");
+        assertTrue(telemetry.contains("completionTokens"), "dashboard should render completion token usage when available");
+        assertTrue(telemetry.contains("totalTokens"), "dashboard should render total token usage when available");
+        assertTrue(telemetry.contains("Provider usage: n/a"), "rule-based executions should not fabricate zero token usage");
     }
 
     private String resource(String path) throws IOException {
