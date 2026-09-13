@@ -5,6 +5,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,25 +37,53 @@ class SpringAiPlanningClientTest {
     }
 
     @Test
-    void returnsStructuredProposalWithoutRegisteringTools() {
-        AiToolProposal expected = new AiToolProposal(
-                "blockCard",
-                "Potential fraud detected");
-        when(responseSpec.entity(AiToolProposal.class)).thenReturn(expected);
+    void returnsStructuredProposalWithProviderUsageWithoutRegisteringTools() {
+        ChatResponse chatResponse = mock(ChatResponse.class);
+        Generation generation = mock(Generation.class);
+        AssistantMessage output = mock(AssistantMessage.class);
+        ChatResponseMetadata metadata = mock(ChatResponseMetadata.class);
+        Usage usage = mock(Usage.class);
 
-        AiToolProposal actual = client.propose("Analise esta possível fraude");
+        when(responseSpec.chatResponse()).thenReturn(chatResponse);
+        when(chatResponse.getResult()).thenReturn(generation);
+        when(generation.getOutput()).thenReturn(output);
+        when(output.getText()).thenReturn("{\"toolName\":\"blockCard\",\"explanation\":\"Potential fraud detected\"}");
+        when(chatResponse.getMetadata()).thenReturn(metadata);
+        when(metadata.getUsage()).thenReturn(usage);
+        when(usage.getPromptTokens()).thenReturn(21);
+        when(usage.getCompletionTokens()).thenReturn(9);
+        when(usage.getTotalTokens()).thenReturn(30);
 
-        assertEquals(expected, actual);
+        AiPlanningResult actual = client.propose("Analise esta possível fraude");
+
+        assertEquals("blockCard", actual.proposal().toolName());
+        assertEquals("Potential fraud detected", actual.proposal().explanation());
+        assertEquals(21, actual.usage().promptTokens());
+        assertEquals(9, actual.usage().completionTokens());
+        assertEquals(30, actual.usage().totalTokens());
         verify(requestSpec).user("Analise esta possível fraude");
-        verify(responseSpec).entity(AiToolProposal.class);
+        verify(responseSpec).chatResponse();
         verify(requestSpec, never()).tools(any(Object[].class));
         verify(requestSpec, never()).toolNames(any(String[].class));
     }
 
     @Test
     void systemPromptDeclaresPlannerOnlyAndAllowedTools() {
-        when(responseSpec.entity(AiToolProposal.class))
-                .thenReturn(new AiToolProposal("calculateRisk", "baseline"));
+        ChatResponse chatResponse = mock(ChatResponse.class);
+        Generation generation = mock(Generation.class);
+        AssistantMessage output = mock(AssistantMessage.class);
+        ChatResponseMetadata metadata = mock(ChatResponseMetadata.class);
+        Usage usage = mock(Usage.class);
+
+        when(responseSpec.chatResponse()).thenReturn(chatResponse);
+        when(chatResponse.getResult()).thenReturn(generation);
+        when(generation.getOutput()).thenReturn(output);
+        when(output.getText()).thenReturn("{\"toolName\":\"calculateRisk\",\"explanation\":\"baseline\"}");
+        when(chatResponse.getMetadata()).thenReturn(metadata);
+        when(metadata.getUsage()).thenReturn(usage);
+        when(usage.getPromptTokens()).thenReturn(5);
+        when(usage.getCompletionTokens()).thenReturn(3);
+        when(usage.getTotalTokens()).thenReturn(8);
 
         client.propose("Calcule o risco");
 
