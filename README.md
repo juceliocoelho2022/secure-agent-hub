@@ -18,7 +18,7 @@ O **SecureAgent Hub** é um projeto de engenharia para estudar como colocar agen
 ## 🎯 Visão do produto
 
 <p align="center">
-  <img src="docs/secure-agent-hub-dashboard.jpg" alt="SecureAgent Hub Dashboard Concept" width="100%" />
+  <img src="https://raw.githubusercontent.com/juceliocoelho2022/secure-agent-hub/main/docs/secure-agent-hub-dashboard.jpg" alt="SecureAgent Hub Dashboard Concept" width="100%" />
 </p>
 
 > A imagem representa a **visão de produto / mockup do dashboard**. A versão atual é focada no backend e APIs; Spring AI, RAG, observabilidade completa e interface serão adicionados incrementalmente.
