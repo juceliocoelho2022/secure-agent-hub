@@ -24,7 +24,7 @@ class SpringAiAgentPlannerTest {
     }
 
     @Test
-    void returnsSpringAiPlanForAllowedStructuredProposal() {
+    void returnsSpringAiPlanForAllowedStructuredProposalWithUsage() {
         when(client.propose("fraud prompt"))
                 .thenReturn(new AiPlanningResult(
                         new AiToolProposal("blockCard", "fraud detected"),
@@ -35,6 +35,9 @@ class SpringAiAgentPlannerTest {
         assertEquals("blockCard", result.toolName());
         assertEquals("fraud detected", result.explanation());
         assertEquals(PlannerSource.SPRING_AI, result.source());
+        assertEquals(12, result.usage().promptTokens());
+        assertEquals(4, result.usage().completionTokens());
+        assertEquals(16, result.usage().totalTokens());
         verify(fallback, never()).plan(anyString());
     }
 
