@@ -54,11 +54,16 @@ public class AgentExecutionService {
         execution.start();
 
         AgentPlan plan = planner.plan(request.prompt());
-        auditService.record(execution.getEntityId(), "AI_AGENT", "TOOL_PLANNED", plan.toolName() + " - " + plan.explanation());
+        auditService.record(
+                execution.getEntityId(),
+                "AI_AGENT",
+                "TOOL_PLANNED",
+                plan.toolName() + " - " + plan.explanation() + " source=" + plan.source().name());
         domainEventService.append(execution.getEntityId(), "agent.tool.planned", Map.of(
                 "executionId", execution.getEntityId().toString(),
                 "tool", plan.toolName(),
-                "explanation", plan.explanation()));
+                "explanation", plan.explanation(),
+                "source", plan.source().name()));
 
         PolicyDecision decision = policyService.evaluate(plan.toolName());
         if (!decision.allowed()) {
