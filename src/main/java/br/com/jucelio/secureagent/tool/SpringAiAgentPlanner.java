@@ -39,7 +39,8 @@ public class SpringAiAgentPlanner implements AgentPlanner {
             return new AgentPlan(
                     proposal.toolName(),
                     proposal.explanation(),
-                    PlannerSource.SPRING_AI);
+                    PlannerSource.SPRING_AI,
+                    planningResult.usage());
         } catch (RuntimeException ex) {
             log.warn("Spring AI planner failed safely; using deterministic fallback: {}",
                     ex.getMessage());
