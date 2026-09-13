@@ -29,6 +29,12 @@ spring:
   ai:
     model:
       chat: ${SPRING_AI_CHAT_MODEL:none}
+      embedding: ${SPRING_AI_EMBEDDING_MODEL:none}
+      image: ${SPRING_AI_IMAGE_MODEL:none}
+      moderation: ${SPRING_AI_MODERATION_MODEL:none}
+      audio:
+        speech: ${SPRING_AI_AUDIO_SPEECH_MODEL:none}
+        transcription: ${SPRING_AI_AUDIO_TRANSCRIPTION_MODEL:none}
     openai:
       api-key: ${OPENAI_API_KEY:}
       chat:
