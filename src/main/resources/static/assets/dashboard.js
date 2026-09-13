@@ -197,7 +197,11 @@ async function createExecution(agent, prompt) {
 }
 
 async function decideApproval(id, action) {
-    await api(`/api/v1/approvals/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
+    const safeId = encodeURIComponent(id);
+    const endpoint = action === 'approve'
+        ? `/api/v1/approvals/${safeId}/approve`
+        : `/api/v1/approvals/${safeId}/reject`;
+    await api(endpoint, { method: 'POST' });
     await loadDashboardData();
 }
 
