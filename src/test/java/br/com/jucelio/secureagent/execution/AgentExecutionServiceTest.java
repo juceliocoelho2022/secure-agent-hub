@@ -1,10 +1,13 @@
 package br.com.jucelio.secureagent.execution;
 
+import br.com.jucelio.secureagent.approval.ApprovalRequest;
 import br.com.jucelio.secureagent.approval.ApprovalRequestRepository;
 import br.com.jucelio.secureagent.audit.AuditService;
 import br.com.jucelio.secureagent.event.DomainEventService;
 import br.com.jucelio.secureagent.policy.PolicyService;
+import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.AgentPlanner;
+import br.com.jucelio.secureagent.tool.PlannerSource;
 import br.com.jucelio.secureagent.tool.RuleBasedAgentPlanner;
 import br.com.jucelio.secureagent.tool.ToolExecutor;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +22,9 @@ class AgentExecutionServiceTest {
     private ApprovalRequestRepository approvalRepository;
     private AuditService auditService;
     private DomainEventService domainEventService;
+    private AgentPlanner planner;
+    private PolicyService policyService;
+    private ToolExecutor toolExecutor;
     private AgentExecutionService service;
 
     @BeforeEach
@@ -27,11 +33,15 @@ class AgentExecutionServiceTest {
         approvalRepository = mock(ApprovalRequestRepository.class);
         auditService = mock(AuditService.class);
         domainEventService = mock(DomainEventService.class);
-        AgentPlanner planner = new RuleBasedAgentPlanner();
-        PolicyService policyService = new PolicyService();
-        ToolExecutor toolExecutor = new ToolExecutor();
+        planner = mock(AgentPlanner.class);
+        policyService = spy(new PolicyService());
+        toolExecutor = spy(new ToolExecutor());
 
-        when(executionRepository.save(any(AgentExecution.class))).thenAnswer(i -> i.getArgument(0));
+        RuleBasedAgentPlanner ruleBasedPlanner = new RuleBasedAgentPlanner();
+        when(planner.plan(anyString()))
+                .thenAnswer(invocation -> ruleBasedPlanner.plan(invocation.getArgument(0)));
+        when(executionRepository.save(any(AgentExecution.class)))
+                .thenAnswer(i -> i.getArgument(0));
 
         service = new AgentExecutionService(
                 executionRepository,
@@ -69,5 +79,29 @@ class AgentExecutionServiceTest {
         assertThat(result.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
         assertThat(result.getResult()).contains("Transaction retrieved");
         verify(domainEventService, atLeastOnce()).append(any(), anyString(), anyMap());
+    }
+
+    @Test
+    void springAiBlockCardProposalStillRequiresHumanApproval() {
+        when(planner.plan(anyString()))
+                .thenReturn(new AgentPlan(
+                        "blockCard",
+                        "Potential fraud detected",
+                        PlannerSource.SPRING_AI));
+
+        AgentExecution result = service.create(
+                new CreateExecutionRequest("fraud-agent", "block suspicious card"),
+                "operator");
+
+        assertThat(result.getStatus()).isEqualTo(ExecutionStatus.WAITING_APPROVAL);
+        assertThat(result.getRequestedTool()).isEqualTo("blockCard");
+        verify(policyService).evaluate("blockCard");
+        verify(approvalRepository).save(any(ApprovalRequest.class));
+        verify(toolExecutor, never()).execute(anyString());
+        verify(auditService).record(
+                eq(result.getEntityId()),
+                eq("AI_AGENT"),
+                eq("TOOL_PLANNED"),
+                contains("source=SPRING_AI"));
     }
 }
