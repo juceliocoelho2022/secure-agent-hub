@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/approvals/**").hasAnyRole("OPERATOR", "ADMIN")
+                        .requestMatchers("/api/v1/agents/executions/*/timeline").hasAnyRole("OPERATOR", "AUDITOR", "ADMIN")
                         .requestMatchers("/api/v1/audit/**").hasAnyRole("AUDITOR", "ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))
