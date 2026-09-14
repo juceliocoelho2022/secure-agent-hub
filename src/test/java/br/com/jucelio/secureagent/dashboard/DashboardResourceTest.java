@@ -112,6 +112,22 @@ class DashboardResourceTest {
         assertTrue(operations.contains("n/a"), "unavailable metrics should render neutrally");
     }
 
+    @Test
+    void dashboardCanSubmitTrustedStructuredRiskContext() throws IOException {
+        String html = resource("/static/dashboard.html");
+        String javascript = resource("/static/assets/dashboard.js");
+
+        assertTrue(html.contains("id=\"riskTransactionId\""));
+        assertTrue(html.contains("id=\"riskAmount\""));
+        assertTrue(html.contains("id=\"riskCountry\""));
+        assertTrue(html.contains("id=\"riskUsualCountry\""));
+        assertTrue(html.contains("id=\"riskHour\""));
+        assertTrue(html.contains("id=\"riskRapidRetry\""));
+        assertTrue(html.contains("id=\"riskKnownDevice\""));
+        assertTrue(javascript.contains("buildExecutionContext"));
+        assertTrue(javascript.contains("JSON.stringify({ agent, prompt, context })"));
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getResourceAsStream(path)) {
             if (input == null) throw new IOException("Missing classpath resource: " + path);
