@@ -5,22 +5,25 @@
     function renderRisk() {
         if (!riskOverview) return;
         const executions = Array.isArray(state?.executions) ? state.executions : [];
-        const candidate = [...executions].reverse().find(item => item?.requestedTool === 'calculateRisk' && item?.result);
+        const candidate = [...executions].reverse().find(item =>
+            Number.isInteger(item?.riskScore) && item?.riskLevel && Array.isArray(item?.riskReasons));
 
-        if (!candidate || candidate.result.includes('(mock)')) {
-            riskOverview.innerHTML = '<strong>n/a</strong><span>No trusted risk score available</span><small>Mock tool output is intentionally excluded.</small>';
+        if (!candidate) {
+            riskOverview.innerHTML = '<strong>n/a</strong><span>No trusted risk assessment available</span><small>Run calculateRisk with structured context.</small>';
             return;
         }
 
-        const match = candidate.result.match(/risk score(?: calculated)?:\s*(\d+(?:\.\d+)?)/i);
-        if (!match) {
-            riskOverview.innerHTML = '<strong>n/a</strong><span>Risk output unavailable</span><small>No structured score found.</small>';
-            return;
-        }
+        const reasons = candidate.riskReasons.length
+            ? candidate.riskReasons.map(reason => `<span class="risk-reason">${reason}</span>`).join('')
+            : '<span class="risk-reason neutral">No triggered risk reasons</span>';
 
-        const score = Number(match[1]);
-        const level = score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
-        riskOverview.innerHTML = `<strong>${score}</strong><span>${level} risk</span><small>Execution ${candidate.id || candidate.entityId || 'observed'}</small>`;
+        riskOverview.innerHTML = `
+            <div class="risk-score-row">
+                <strong>${candidate.riskScore}<small>/100</small></strong>
+                <span class="risk-level ${String(candidate.riskLevel).toLowerCase()}">${candidate.riskLevel}</span>
+            </div>
+            <div class="risk-reasons">${reasons}</div>
+            <small>Execution ${candidate.id || candidate.entityId || 'observed'} · backend-calculated</small>`;
     }
 
     function pipelineNode(label, value, status) {
