@@ -70,6 +70,25 @@
             </article>
         </section>
 
+        <section class="analytics-grid" aria-label="Live operational analytics">
+            <article class="panel analytics-panel agent-status-card">
+                <div class="analytics-heading"><div><p class="eyebrow">AGENTOPS</p><h2>Agent Status</h2></div><span class="analytics-live">LIVE</span></div>
+                <div id="agentStatusPanel" class="agent-status-panel"><div class="analytics-empty">n/a · waiting for execution data</div></div>
+            </article>
+            <article class="panel analytics-panel">
+                <div class="analytics-heading"><div><p class="eyebrow">EXECUTIONS</p><h2>Execution Status</h2></div><span class="analytics-icon">▥</span></div>
+                <div id="executionStatusChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for execution data</div></div>
+            </article>
+            <article class="panel analytics-panel">
+                <div class="analytics-heading"><div><p class="eyebrow">PLANNER</p><h2>Planner Usage</h2></div><span class="analytics-icon">◎</span></div>
+                <div id="plannerUsageChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for planner provenance</div></div>
+            </article>
+            <article class="panel analytics-panel pressure-card">
+                <div class="analytics-heading"><div><p class="eyebrow">GOVERNANCE</p><h2>Approval Pressure</h2></div><span class="analytics-icon">◌</span></div>
+                <div id="approvalPressure" class="pressure-gauge"><strong>n/a</strong><span>No execution data</span></div>
+            </article>
+        </section>
+
         <section class="command-center-grid">
             <article class="panel agents-overview" id="agents">
                 <div class="panel-header">
@@ -209,5 +228,6 @@
 </div>
 <script src="/assets/dashboard.js"></script>
 <script src="/assets/dashboard-telemetry.js"></script>
+<script src="/assets/dashboard-analytics.js"></script>
 </body>
 </html>
