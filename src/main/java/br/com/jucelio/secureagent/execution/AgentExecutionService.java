@@ -9,6 +9,8 @@ import br.com.jucelio.secureagent.policy.PolicyService;
 import br.com.jucelio.secureagent.risk.ExplainableRiskService;
 import br.com.jucelio.secureagent.risk.RiskAssessment;
 import br.com.jucelio.secureagent.risk.RiskAssessmentRequest;
+import br.com.jucelio.secureagent.risk.RiskRecommendation;
+import br.com.jucelio.secureagent.risk.RiskRecommendationService;
 import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.AgentPlanner;
 import br.com.jucelio.secureagent.tool.ToolExecutor;
@@ -30,6 +32,7 @@ public class AgentExecutionService {
     private final AuditService auditService;
     private final DomainEventService domainEventService;
     private final ExplainableRiskService riskService;
+    private final RiskRecommendationService recommendationService;
 
     public AgentExecutionService(AgentExecutionRepository repository,
                                  ApprovalRequestRepository approvalRepository,
@@ -38,7 +41,8 @@ public class AgentExecutionService {
                                  ToolExecutor toolExecutor,
                                  AuditService auditService,
                                  DomainEventService domainEventService,
-                                 ExplainableRiskService riskService) {
+                                 ExplainableRiskService riskService,
+                                 RiskRecommendationService recommendationService) {
         this.repository = repository;
         this.approvalRepository = approvalRepository;
         this.planner = planner;
@@ -47,6 +51,7 @@ public class AgentExecutionService {
         this.auditService = auditService;
         this.domainEventService = domainEventService;
         this.riskService = riskService;
+        this.recommendationService = recommendationService;
     }
 
     @Transactional
@@ -54,28 +59,16 @@ public class AgentExecutionService {
         AgentExecution execution = repository.save(new AgentExecution(request.agent(), request.prompt()));
         auditService.record(execution.getEntityId(), username, "EXECUTION_CREATED", "Agent=" + request.agent());
         domainEventService.append(execution.getEntityId(), "agent.execution.created", Map.of(
-                "executionId", execution.getEntityId().toString(),
-                "agent", request.agent(),
-                "requestedBy", username));
-
+                "executionId", execution.getEntityId().toString(), "agent", request.agent(), "requestedBy", username));
         execution.start();
 
         AgentPlan plan = planner.plan(request.prompt());
         execution.recordPlanning(plan);
-
         String usageDetails = plan.usage().available()
-                ? " usage=prompt:" + plan.usage().promptTokens()
-                    + ",completion:" + plan.usage().completionTokens()
-                    + ",total:" + plan.usage().totalTokens()
+                ? " usage=prompt:" + plan.usage().promptTokens() + ",completion:" + plan.usage().completionTokens() + ",total:" + plan.usage().totalTokens()
                 : "";
-
-        auditService.record(
-                execution.getEntityId(),
-                "AI_AGENT",
-                "TOOL_PLANNED",
-                plan.toolName() + " - " + plan.explanation()
-                        + " source=" + plan.source().name()
-                        + usageDetails);
+        auditService.record(execution.getEntityId(), "AI_AGENT", "TOOL_PLANNED",
+                plan.toolName() + " - " + plan.explanation() + " source=" + plan.source().name() + usageDetails);
 
         Map<String, Object> plannedEvent = new HashMap<>();
         plannedEvent.put("executionId", execution.getEntityId().toString());
@@ -92,34 +85,17 @@ public class AgentExecutionService {
             execution.reject("Denied by policy: " + decision.reason());
             auditService.record(execution.getEntityId(), "POLICY_ENGINE", "TOOL_DENIED", decision.reason());
             domainEventService.append(execution.getEntityId(), "agent.tool.denied", Map.of(
-                    "executionId", execution.getEntityId().toString(),
-                    "tool", plan.toolName(),
-                    "reason", decision.reason()));
+                    "executionId", execution.getEntityId().toString(), "tool", plan.toolName(), "reason", decision.reason()));
             return repository.save(execution);
         }
-
-        if (decision.humanApprovalRequired()) {
-            execution.waitForApproval(plan.toolName());
-            approvalRepository.save(new ApprovalRequest(execution.getEntityId(), plan.toolName(), decision.reason()));
-            auditService.record(execution.getEntityId(), "POLICY_ENGINE", "HUMAN_APPROVAL_REQUIRED", decision.reason());
-            domainEventService.append(execution.getEntityId(), "agent.approval.requested", Map.of(
-                    "executionId", execution.getEntityId().toString(),
-                    "tool", plan.toolName(),
-                    "reason", decision.reason()));
-            return repository.save(execution);
-        }
-
-        if ("calculateRisk".equals(plan.toolName())) {
-            return executeRiskAssessment(execution, request.context());
-        }
+        if (decision.humanApprovalRequired()) return requestApproval(execution, plan.toolName(), decision.reason());
+        if ("calculateRisk".equals(plan.toolName())) return executeRiskAssessment(execution, request.context());
 
         String result = toolExecutor.execute(plan.toolName());
         execution.complete(result);
         auditService.record(execution.getEntityId(), "TOOL_SERVICE", "TOOL_EXECUTED", result);
         domainEventService.append(execution.getEntityId(), "agent.execution.completed", Map.of(
-                "executionId", execution.getEntityId().toString(),
-                "tool", plan.toolName(),
-                "result", result));
+                "executionId", execution.getEntityId().toString(), "tool", plan.toolName(), "result", result));
         return repository.save(execution);
     }
 
@@ -129,34 +105,17 @@ public class AgentExecutionService {
             execution.complete(result);
             auditService.record(execution.getEntityId(), "RISK_ENGINE", "RISK_CONTEXT_MISSING", result);
             domainEventService.append(execution.getEntityId(), "agent.risk.unavailable", Map.of(
-                    "executionId", execution.getEntityId().toString(),
-                    "reason", "STRUCTURED_CONTEXT_REQUIRED"));
+                    "executionId", execution.getEntityId().toString(), "reason", "STRUCTURED_CONTEXT_REQUIRED"));
             return repository.save(execution);
         }
 
         RiskAssessment assessment = riskService.assess(new RiskAssessmentRequest(
-                context.transactionId(),
-                context.amount(),
-                context.country(),
-                context.usualCountry(),
-                context.hour(),
-                context.rapidRetry(),
-                context.knownDevice()));
-
+                context.transactionId(), context.amount(), context.country(), context.usualCountry(), context.hour(), context.rapidRetry(), context.knownDevice()));
         execution.recordRisk(assessment);
-        String result = "riskScore=" + assessment.score()
-                + "; riskLevel=" + assessment.level().name()
-                + "; reasons=" + assessment.reasons();
-        execution.complete(result);
+        String riskResult = "riskScore=" + assessment.score() + "; riskLevel=" + assessment.level().name() + "; reasons=" + assessment.reasons();
 
-        auditService.record(
-                execution.getEntityId(),
-                "RISK_ENGINE",
-                "RISK_ASSESSED",
-                "score=" + assessment.score()
-                        + " level=" + assessment.level().name()
-                        + " reasons=" + assessment.reasons());
-
+        auditService.record(execution.getEntityId(), "RISK_ENGINE", "RISK_ASSESSED",
+                "score=" + assessment.score() + " level=" + assessment.level().name() + " reasons=" + assessment.reasons());
         Map<String, Object> riskEvent = new HashMap<>();
         riskEvent.put("executionId", execution.getEntityId().toString());
         if (context.transactionId() != null) riskEvent.put("transactionId", context.transactionId());
@@ -165,22 +124,48 @@ public class AgentExecutionService {
         riskEvent.put("reasons", assessment.reasons().stream().map(Enum::name).toList());
         domainEventService.append(execution.getEntityId(), "agent.risk.assessed", riskEvent);
 
+        var recommendation = recommendationService.recommend(assessment);
+        if (recommendation.isPresent()) {
+            RiskRecommendation rec = recommendation.get();
+            execution.recordRecommendation(rec);
+            auditService.record(execution.getEntityId(), "RISK_ENGINE", "RISK_ACTION_RECOMMENDED",
+                    "action=" + rec.action() + " reason=" + rec.reason() + " score=" + assessment.score());
+            domainEventService.append(execution.getEntityId(), "agent.risk.action-recommended", Map.of(
+                    "executionId", execution.getEntityId().toString(),
+                    "riskScore", assessment.score(),
+                    "riskLevel", assessment.level().name(),
+                    "recommendedAction", rec.action(),
+                    "reason", rec.reason()));
+
+            PolicyDecision recommendationDecision = policyService.evaluate(rec.action());
+            if (!recommendationDecision.allowed()) {
+                execution.reject("Recommended action denied by policy: " + recommendationDecision.reason());
+                return repository.save(execution);
+            }
+            if (recommendationDecision.humanApprovalRequired()) {
+                return requestApproval(execution, rec.action(), recommendationDecision.reason());
+            }
+        }
+
+        execution.complete(riskResult);
         domainEventService.append(execution.getEntityId(), "agent.execution.completed", Map.of(
-                "executionId", execution.getEntityId().toString(),
-                "tool", "calculateRisk",
-                "result", result));
+                "executionId", execution.getEntityId().toString(), "tool", "calculateRisk", "result", riskResult));
+        return repository.save(execution);
+    }
+
+    private AgentExecution requestApproval(AgentExecution execution, String toolName, String reason) {
+        execution.waitForApproval(toolName);
+        approvalRepository.save(new ApprovalRequest(execution.getEntityId(), toolName, reason));
+        auditService.record(execution.getEntityId(), "POLICY_ENGINE", "HUMAN_APPROVAL_REQUIRED", reason);
+        domainEventService.append(execution.getEntityId(), "agent.approval.requested", Map.of(
+                "executionId", execution.getEntityId().toString(), "tool", toolName, "reason", reason));
         return repository.save(execution);
     }
 
     @Transactional(readOnly = true)
-    public AgentExecution get(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Execution not found"));
-    }
-
+    public AgentExecution get(UUID id) { return repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Execution not found")); }
     @Transactional(readOnly = true)
-    public List<AgentExecution> list() {
-        return repository.findAll();
-    }
+    public List<AgentExecution> list() { return repository.findAll(); }
 
     @Transactional
     public AgentExecution executeApprovedTool(UUID executionId, String toolName, String operator) {
@@ -189,10 +174,7 @@ public class AgentExecutionService {
         execution.complete(result);
         auditService.record(executionId, operator, "APPROVED_TOOL_EXECUTED", toolName + " -> " + result);
         domainEventService.append(executionId, "agent.tool.approved-and-executed", Map.of(
-                "executionId", executionId.toString(),
-                "tool", toolName,
-                "approvedBy", operator,
-                "result", result));
+                "executionId", executionId.toString(), "tool", toolName, "approvedBy", operator, "result", result));
         return repository.save(execution);
     }
 
@@ -202,8 +184,7 @@ public class AgentExecutionService {
         execution.reject("Rejected by human operator");
         auditService.record(executionId, operator, "HUMAN_REJECTED", "Operation rejected by human operator");
         domainEventService.append(executionId, "agent.approval.rejected", Map.of(
-                "executionId", executionId.toString(),
-                "rejectedBy", operator));
+                "executionId", executionId.toString(), "rejectedBy", operator));
         return repository.save(execution);
     }
 }
