@@ -49,7 +49,7 @@
                 <form id="agentPromptForm" class="agent-prompt-form">
                     <div class="agent-form-row"><label class="agent-field agent-name-field">Agent<select id="agentName"><option value="fraud-agent">Fraud Agent</option><option value="operations-agent">Operations Agent</option></select></label><label class="agent-field prompt-field">Intent<input id="agentPrompt" maxlength="2000" placeholder="Ex.: calcule o risco da operação TX-9001" required></label><button class="primary-button agent-submit" id="agentSubmitButton" type="submit">Execute</button></div>
                     <details class="risk-context-panel">
-                        <summary>Structured Risk Context <span>trusted backend facts</span></summary>
+                        <summary>Structured Risk Context <span>local demo input</span></summary>
                         <div class="risk-context-grid">
                             <label>Transaction ID<input id="riskTransactionId" placeholder="TX-9001"></label>
                             <label>Amount<input id="riskAmount" type="number" min="0" step="0.01" placeholder="9800.00"></label>
@@ -59,7 +59,7 @@
                             <label class="risk-checkbox"><input id="riskRapidRetry" type="checkbox"> Rapid retry</label>
                             <label class="risk-checkbox"><input id="riskKnownDevice" type="checkbox"> Known device</label>
                         </div>
-                        <small class="risk-context-note">These values are structured facts. The LLM does not invent them and does not calculate the score.</small>
+                        <small class="risk-context-note">These are structured demo inputs. In production they must come from trusted server-side sources; the LLM does not invent them or calculate the score.</small>
                     </details>
                     <p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p>
                 </form>
