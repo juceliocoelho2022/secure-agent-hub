@@ -26,11 +26,32 @@ spring:
       group-id: ${KAFKA_GROUP_ID:secure-agent-hub}
       auto-offset-reset: earliest
       enable-auto-commit: false
+  ai:
+    model:
+      chat: ${SPRING_AI_CHAT_MODEL:none}
+      embedding: ${SPRING_AI_EMBEDDING_MODEL:none}
+      image: ${SPRING_AI_IMAGE_MODEL:none}
+      moderation: ${SPRING_AI_MODERATION_MODEL:none}
+      audio:
+        speech: ${SPRING_AI_AUDIO_SPEECH_MODEL:none}
+        transcription: ${SPRING_AI_AUDIO_TRANSCRIPTION_MODEL:none}
+    chat:
+      client:
+        tool-calling:
+          enabled: false
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5-mini}
+          temperature: ${OPENAI_CHAT_TEMPERATURE:0.2}
 
 server:
   port: ${PORT:8080}
 
 app:
+  agent:
+    planner: ${AGENT_PLANNER:rules}
   bootstrap:
     dev-users: ${BOOTSTRAP_DEV_USERS:true}
   security:

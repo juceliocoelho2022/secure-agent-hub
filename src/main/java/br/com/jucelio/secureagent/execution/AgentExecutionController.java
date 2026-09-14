@@ -12,9 +12,12 @@ import java.util.UUID;
 @RequestMapping("/api/v1/agents/executions")
 public class AgentExecutionController {
     private final AgentExecutionService service;
+    private final OperationalTimelineService timelineService;
 
-    public AgentExecutionController(AgentExecutionService service) {
+    public AgentExecutionController(AgentExecutionService service,
+                                    OperationalTimelineService timelineService) {
         this.service = service;
+        this.timelineService = timelineService;
     }
 
     @PostMapping
@@ -26,6 +29,11 @@ public class AgentExecutionController {
     @GetMapping("/{id}")
     public ExecutionResponse get(@PathVariable UUID id) {
         return ExecutionResponse.from(service.get(id));
+    }
+
+    @GetMapping("/{id}/timeline")
+    public List<OperationalTimelineItem> timeline(@PathVariable UUID id) {
+        return timelineService.byExecution(id);
     }
 
     @GetMapping

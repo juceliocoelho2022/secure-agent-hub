@@ -1,9 +1,9 @@
 package br.com.jucelio.secureagent.config;
 
 import br.com.jucelio.secureagent.auth.DatabaseAuthenticationProvider;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import com.nimbusds.jose.jwk.JWKSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,9 +36,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/dashboard.html", "/assets/**", "/favicon.ico").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/approvals/**").hasAnyRole("OPERATOR", "ADMIN")
+                        .requestMatchers("/api/v1/agents/executions/*/timeline").hasAnyRole("OPERATOR", "AUDITOR", "ADMIN")
                         .requestMatchers("/api/v1/audit/**").hasAnyRole("AUDITOR", "ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))
