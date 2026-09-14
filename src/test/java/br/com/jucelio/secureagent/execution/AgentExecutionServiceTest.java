@@ -9,6 +9,7 @@ import br.com.jucelio.secureagent.policy.PolicyService;
 import br.com.jucelio.secureagent.risk.ExplainableRiskService;
 import br.com.jucelio.secureagent.risk.RiskLevel;
 import br.com.jucelio.secureagent.risk.RiskReason;
+import br.com.jucelio.secureagent.risk.RiskRecommendationService;
 import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.AgentPlanner;
 import br.com.jucelio.secureagent.tool.PlannerSource;
@@ -32,6 +33,7 @@ class AgentExecutionServiceTest {
     private PolicyService policyService;
     private ToolExecutor toolExecutor;
     private ExplainableRiskService riskService;
+    private RiskRecommendationService recommendationService;
     private AgentExecutionService service;
 
     @BeforeEach
@@ -44,6 +46,7 @@ class AgentExecutionServiceTest {
         policyService = spy(new PolicyService());
         toolExecutor = spy(new ToolExecutor());
         riskService = spy(new ExplainableRiskService());
+        recommendationService = spy(new RiskRecommendationService());
 
         RuleBasedAgentPlanner ruleBasedPlanner = new RuleBasedAgentPlanner();
         when(planner.plan(anyString()))
@@ -59,7 +62,8 @@ class AgentExecutionServiceTest {
                 toolExecutor,
                 auditService,
                 domainEventService,
-                riskService);
+                riskService,
+                recommendationService);
     }
 
     @Test
@@ -91,7 +95,7 @@ class AgentExecutionServiceTest {
     }
 
     @Test
-    void shouldCalculatePersistAndExposeExplainableRiskFromStructuredContext() {
+    void criticalRiskShouldPersistRecommendationAndRequireHumanApprovalBeforeBlock() {
         when(planner.plan(anyString())).thenReturn(new AgentPlan(
                 "calculateRisk",
                 "Assess structured transaction risk",
@@ -108,10 +112,10 @@ class AgentExecutionServiceTest {
                 false);
 
         AgentExecution result = service.create(
-                new CreateExecutionRequest("fraud-agent", "Analise a transação TX-9001", context),
+                new CreateExecutionRequest("fraud-agent", "Calcule o risco da operação TX-9001", context),
                 "operator");
 
-        assertThat(result.getStatus()).isEqualTo(ExecutionStatus.COMPLETED);
+        assertThat(result.getStatus()).isEqualTo(ExecutionStatus.WAITING_APPROVAL);
         assertThat(result.getRiskScore()).isEqualTo(95);
         assertThat(result.getRiskLevel()).isEqualTo(RiskLevel.CRITICAL);
         assertThat(result.getRiskReasons()).containsExactly(
@@ -119,28 +123,30 @@ class AgentExecutionServiceTest {
                 RiskReason.FOREIGN_COUNTRY,
                 RiskReason.UNUSUAL_HOUR,
                 RiskReason.RAPID_RETRY);
-        assertThat(result.getResult()).contains("riskScore=95", "riskLevel=CRITICAL");
+        assertThat(result.getRecommendedAction()).isEqualTo("blockCard");
+        assertThat(result.getRecommendationReason()).isEqualTo("CRITICAL_RISK");
+        assertThat(result.getRequestedTool()).isEqualTo("blockCard");
 
         ExecutionResponse response = ExecutionResponse.from(result);
         assertThat(response.riskScore()).isEqualTo(95);
         assertThat(response.riskLevel()).isEqualTo(RiskLevel.CRITICAL);
-        assertThat(response.riskReasons()).containsExactly(
-                RiskReason.HIGH_AMOUNT,
-                RiskReason.FOREIGN_COUNTRY,
-                RiskReason.UNUSUAL_HOUR,
-                RiskReason.RAPID_RETRY);
+        assertThat(response.recommendedAction()).isEqualTo("blockCard");
+        assertThat(response.recommendationReason()).isEqualTo("CRITICAL_RISK");
 
         verify(riskService).assess(any());
-        verify(toolExecutor, never()).execute("calculateRisk");
+        verify(recommendationService).recommend(any());
+        verify(policyService).evaluate("blockCard");
+        verify(approvalRepository).save(any(ApprovalRequest.class));
+        verify(toolExecutor, never()).execute("blockCard");
         verify(auditService).record(
                 eq(result.getEntityId()),
                 eq("RISK_ENGINE"),
-                eq("RISK_ASSESSED"),
-                contains("score=95"));
+                eq("RISK_ACTION_RECOMMENDED"),
+                contains("CRITICAL_RISK"));
         verify(domainEventService).append(
                 eq(result.getEntityId()),
-                eq("agent.risk.assessed"),
-                argThat(payload -> Integer.valueOf(95).equals(payload.get("riskScore"))));
+                eq("agent.risk.action-recommended"),
+                argThat(payload -> "blockCard".equals(payload.get("recommendedAction"))));
     }
 
     @Test
