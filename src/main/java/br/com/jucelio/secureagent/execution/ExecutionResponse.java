@@ -22,23 +22,14 @@ public record ExecutionResponse(
         Integer totalTokens,
         Integer riskScore,
         RiskLevel riskLevel,
-        List<RiskReason> riskReasons
+        List<RiskReason> riskReasons,
+        String recommendedAction,
+        String recommendationReason
 ) {
     static ExecutionResponse from(AgentExecution e) {
         return new ExecutionResponse(
-                e.getEntityId(),
-                e.getAgentName(),
-                e.getPrompt(),
-                e.getStatus(),
-                e.getRequestedTool(),
-                e.getResult(),
-                e.getCreatedAt(),
-                e.getPlannerSource(),
-                e.getPromptTokens(),
-                e.getCompletionTokens(),
-                e.getTotalTokens(),
-                e.getRiskScore(),
-                e.getRiskLevel(),
-                e.getRiskReasons());
+                e.getEntityId(), e.getAgentName(), e.getPrompt(), e.getStatus(), e.getRequestedTool(), e.getResult(),
+                e.getCreatedAt(), e.getPlannerSource(), e.getPromptTokens(), e.getCompletionTokens(), e.getTotalTokens(),
+                e.getRiskScore(), e.getRiskLevel(), e.getRiskReasons(), e.getRecommendedAction(), e.getRecommendationReason());
     }
 }
