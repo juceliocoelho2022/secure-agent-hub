@@ -106,7 +106,9 @@ class DashboardResourceTest {
         assertTrue(html.contains("id=\"eventPipelineHealth\""), "dashboard should expose event pipeline health");
         assertTrue(html.contains("/assets/dashboard-operations.js"), "dashboard should load operational intelligence renderer");
         assertTrue(operations.contains("/api/v1/operations/pipeline-health"), "pipeline data should come from the backend");
-        assertTrue(operations.contains("(mock)"), "mock risk results must be detected rather than presented as real scores");
+        assertTrue(operations.contains("candidate.riskScore"), "risk overview should use persisted backend risk score");
+        assertTrue(operations.contains("candidate.riskLevel"), "risk overview should use persisted backend risk level");
+        assertTrue(operations.contains("candidate.riskReasons"), "risk overview should show explainable backend reasons");
         assertTrue(operations.contains("n/a"), "unavailable metrics should render neutrally");
     }
 
