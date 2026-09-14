@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/assets/dashboard.css">
     <link rel="stylesheet" href="/assets/dashboard-controls.css">
     <link rel="stylesheet" href="/assets/dashboard-visual.css">
+    <script src="/assets/dashboard-theme.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -47,181 +48,63 @@
                     <span class="status-dot"></span>
                     <span id="connectionText">Checking API</span>
                 </div>
+                <button class="secondary-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme">☀ Light</button>
                 <button class="secondary-button" id="refreshButton" type="button">Refresh</button>
             </div>
         </header>
 
         <section class="metrics-grid" id="overview">
-            <article class="metric-card">
-                <div class="metric-header"><span>Agent executions</span><span class="metric-icon">◉</span></div>
-                <strong id="executionCount">—</strong><small>Observed executions</small>
-            </article>
-            <article class="metric-card">
-                <div class="metric-header"><span>Pending approvals</span><span class="metric-icon">⌛</span></div>
-                <strong id="approvalCount">—</strong><small>Human review queue</small>
-            </article>
-            <article class="metric-card">
-                <div class="metric-header"><span>Security model</span><span class="metric-icon">◆</span></div>
-                <strong>RBAC</strong><small>JWT + Policy Engine</small>
-            </article>
-            <article class="metric-card">
-                <div class="metric-header"><span>Event delivery</span><span class="metric-icon">↯</span></div>
-                <strong>At-least-once</strong><small>Outbox + idempotent consumer</small>
-            </article>
+            <article class="metric-card"><div class="metric-header"><span>Agent executions</span><span class="metric-icon">◉</span></div><strong id="executionCount">—</strong><small>Observed executions</small></article>
+            <article class="metric-card"><div class="metric-header"><span>Pending approvals</span><span class="metric-icon">⌛</span></div><strong id="approvalCount">—</strong><small>Human review queue</small></article>
+            <article class="metric-card"><div class="metric-header"><span>Security model</span><span class="metric-icon">◆</span></div><strong>RBAC</strong><small>JWT + Policy Engine</small></article>
+            <article class="metric-card"><div class="metric-header"><span>Event delivery</span><span class="metric-icon">↯</span></div><strong>At-least-once</strong><small>Outbox + idempotent consumer</small></article>
         </section>
 
         <section class="analytics-grid" aria-label="Live operational analytics">
-            <article class="panel analytics-panel agent-status-card">
-                <div class="analytics-heading"><div><p class="eyebrow">AGENTOPS</p><h2>Agent Status</h2></div><span class="analytics-live">LIVE</span></div>
-                <div id="agentStatusPanel" class="agent-status-panel"><div class="analytics-empty">n/a · waiting for execution data</div></div>
-            </article>
-            <article class="panel analytics-panel">
-                <div class="analytics-heading"><div><p class="eyebrow">EXECUTIONS</p><h2>Execution Status</h2></div><span class="analytics-icon">▥</span></div>
-                <div id="executionStatusChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for execution data</div></div>
-            </article>
-            <article class="panel analytics-panel">
-                <div class="analytics-heading"><div><p class="eyebrow">PLANNER</p><h2>Planner Usage</h2></div><span class="analytics-icon">◎</span></div>
-                <div id="plannerUsageChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for planner provenance</div></div>
-            </article>
-            <article class="panel analytics-panel pressure-card">
-                <div class="analytics-heading"><div><p class="eyebrow">GOVERNANCE</p><h2>Approval Pressure</h2></div><span class="analytics-icon">◌</span></div>
-                <div id="approvalPressure" class="pressure-gauge"><strong>n/a</strong><span>No execution data</span></div>
-            </article>
+            <article class="panel analytics-panel agent-status-card"><div class="analytics-heading"><div><p class="eyebrow">AGENTOPS</p><h2>Agent Status</h2></div><span class="analytics-live">LIVE</span></div><div id="agentStatusPanel" class="agent-status-panel"><div class="analytics-empty">n/a · waiting for execution data</div></div></article>
+            <article class="panel analytics-panel"><div class="analytics-heading"><div><p class="eyebrow">EXECUTIONS</p><h2>Execution Status</h2></div><span class="analytics-icon">▥</span></div><div id="executionStatusChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for execution data</div></div></article>
+            <article class="panel analytics-panel"><div class="analytics-heading"><div><p class="eyebrow">PLANNER</p><h2>Planner Usage</h2></div><span class="analytics-icon">◎</span></div><div id="plannerUsageChart" class="analytics-chart"><div class="analytics-empty">n/a · waiting for planner provenance</div></div></article>
+            <article class="panel analytics-panel pressure-card"><div class="analytics-heading"><div><p class="eyebrow">GOVERNANCE</p><h2>Approval Pressure</h2></div><span class="analytics-icon">◌</span></div><div id="approvalPressure" class="pressure-gauge"><strong>n/a</strong><span>No execution data</span></div></article>
         </section>
 
         <section class="command-center-grid">
             <article class="panel agents-overview" id="agents">
-                <div class="panel-header">
-                    <div>
-                        <p class="eyebrow">AI AGENT CONTROL</p>
-                        <h2 class="command-panel-title">Agents</h2>
-                    </div>
-                    <span class="badge secure">Backend controlled</span>
-                </div>
-
+                <div class="panel-header"><div><p class="eyebrow">AI AGENT CONTROL</p><h2 class="command-panel-title">Agents</h2></div><span class="badge secure">Backend controlled</span></div>
                 <form id="agentPromptForm" class="agent-prompt-form">
                     <div class="agent-form-row">
-                        <label class="agent-field agent-name-field">Agent
-                            <select id="agentName">
-                                <option value="fraud-agent">Fraud Agent</option>
-                                <option value="operations-agent">Operations Agent</option>
-                            </select>
-                        </label>
-                        <label class="agent-field prompt-field">Intent
-                            <input id="agentPrompt" maxlength="2000" placeholder="Ex.: analise a transação 123 e bloqueie o cartão se houver alto risco" required>
-                        </label>
+                        <label class="agent-field agent-name-field">Agent<select id="agentName"><option value="fraud-agent">Fraud Agent</option><option value="operations-agent">Operations Agent</option></select></label>
+                        <label class="agent-field prompt-field">Intent<input id="agentPrompt" maxlength="2000" placeholder="Ex.: analise a transação 123 e bloqueie o cartão se houver alto risco" required></label>
                         <button class="primary-button agent-submit" id="agentSubmitButton" type="submit">Execute</button>
                     </div>
                     <p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p>
                 </form>
-
-                <div class="agent-catalog" aria-label="Governed agent catalog">
-                    <div class="agent-catalog-card">
-                        <div class="agent-avatar">F</div>
-                        <div><strong>Fraud Agent</strong><span>Risk analysis · protected actions</span></div>
-                    </div>
-                    <div class="agent-catalog-card">
-                        <div class="agent-avatar">O</div>
-                        <div><strong>Operations Agent</strong><span>Operational analysis · controlled tools</span></div>
-                    </div>
-                </div>
-
-                <div class="control-strip">
-                    <span>Intent</span><b>→</b><span>AI Agent</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span>
-                </div>
+                <div class="agent-catalog" aria-label="Governed agent catalog"><div class="agent-catalog-card"><div class="agent-avatar">F</div><div><strong>Fraud Agent</strong><span>Risk analysis · protected actions</span></div></div><div class="agent-catalog-card"><div class="agent-avatar">O</div><div><strong>Operations Agent</strong><span>Operational analysis · controlled tools</span></div></div></div>
+                <div class="control-strip"><span>Intent</span><b>→</b><span>AI Agent</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span></div>
             </article>
 
             <article class="panel governance-overview" id="approvals">
-                <div class="panel-header">
-                    <div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2 class="command-panel-title">Pending Approvals</h2></div>
-                    <span class="badge next">Protected</span>
-                </div>
-
-                <div class="governance-strip">
-                    <div class="governance-chip"><span>Policy</span><strong>Authoritative</strong></div>
-                    <div class="governance-chip"><span>Critical tools</span><strong>HITL</strong></div>
-                    <div class="governance-chip"><span>Audit</span><strong>Enabled</strong></div>
-                </div>
-
-                <p class="form-message" id="approvalFeedback"></p>
-                <div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div>
+                <div class="panel-header"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2 class="command-panel-title">Pending Approvals</h2></div><span class="badge next">Protected</span></div>
+                <div class="governance-strip"><div class="governance-chip"><span>Policy</span><strong>Authoritative</strong></div><div class="governance-chip"><span>Critical tools</span><strong>HITL</strong></div><div class="governance-chip"><span>Audit</span><strong>Enabled</strong></div></div>
+                <p class="form-message" id="approvalFeedback"></p><div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div>
             </article>
 
-            <article class="panel events-overview" id="events">
-                <div class="panel-header">
-                    <div><p class="eyebrow">EVENT STREAM</p><h2 class="command-panel-title">Recent Events</h2></div>
-                    <span class="badge">Kafka + Outbox</span>
-                </div>
-                <div id="executionList" class="activity-list"><div class="empty-state">Authenticate to load execution data.</div></div>
-            </article>
+            <article class="panel events-overview" id="events"><div class="panel-header"><div><p class="eyebrow">EVENT STREAM</p><h2 class="command-panel-title">Recent Events</h2></div><span class="badge">Kafka + Outbox</span></div><div id="executionList" class="activity-list"><div class="empty-state">Authenticate to load execution data.</div></div></article>
 
             <article class="panel session-overview login-panel">
-                <div class="panel-header">
-                    <div><p class="eyebrow">ACCESS CONTROL</p><h2 class="command-panel-title">API Session</h2></div>
-                    <span class="badge secure">JWT</span>
-                </div>
-                <form id="loginForm">
-                    <label>Username<input id="username" value="analyst" autocomplete="username"></label>
-                    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Local development password"></label>
-                    <button class="primary-button" type="submit">Authenticate</button>
-                </form>
-                <div id="sessionPanel" hidden>
-                    <div class="session-card">
-                        <strong id="sessionUsername">Authenticated user</strong>
-                        <span id="sessionRoles">ROLE</span>
-                    </div>
-                    <button class="link-button" id="logoutButton" type="button">Logout</button>
-                </div>
-                <p class="form-message" id="authMessage">Use a local development user.</p>
+                <div class="panel-header"><div><p class="eyebrow">ACCESS CONTROL</p><h2 class="command-panel-title">API Session</h2></div><span class="badge secure">JWT</span></div>
+                <form id="loginForm"><label>Username<input id="username" value="analyst" autocomplete="username"></label><label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Local development password"></label><button class="primary-button" type="submit">Authenticate</button></form>
+                <div id="sessionPanel" hidden><div class="session-card"><strong id="sessionUsername">Authenticated user</strong><span id="sessionRoles">ROLE</span></div><button class="link-button" id="logoutButton" type="button">Logout</button></div><p class="form-message" id="authMessage">Use a local development user.</p>
             </article>
 
             <article class="panel execution-inspector" id="executionInspector">
-                <div class="panel-header">
-                    <div><p class="eyebrow">GOVERNED EXECUTION</p><h2 class="command-panel-title">Execution Inspector</h2></div>
-                    <span class="badge secure">Least privilege</span>
-                </div>
-                <div class="inspector-grid">
-                    <div class="inspector-left">
-                        <div id="executionInspectorSummary" class="inspector-summary">
-                            <div class="empty-state">Select an execution to inspect its governed lifecycle.</div>
-                        </div>
-                        <div id="plannerTelemetry" class="decision-summary">
-                            <div class="decision-summary-title">Planner Telemetry</div>
-                            <div class="empty-state">Select an execution to inspect planner and provider usage.</div>
-                        </div>
-                        <div id="decisionSummary" class="decision-summary">
-                            <div class="decision-summary-title">Decision Summary</div>
-                            <div class="empty-state">Select an execution to inspect policy and human decisions.</div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="timeline-heading">
-                            <strong>Operational timeline</strong>
-                            <span>Sanitized view</span>
-                        </div>
-                        <div id="executionTimeline" class="execution-timeline">
-                            <div class="empty-state">Operator, Auditor or Admin role required to load timeline data.</div>
-                        </div>
-                    </div>
-                </div>
+                <div class="panel-header"><div><p class="eyebrow">GOVERNED EXECUTION</p><h2 class="command-panel-title">Execution Inspector</h2></div><span class="badge secure">Least privilege</span></div>
+                <div class="inspector-grid"><div class="inspector-left"><div id="executionInspectorSummary" class="inspector-summary"><div class="empty-state">Select an execution to inspect its governed lifecycle.</div></div><div id="plannerTelemetry" class="decision-summary"><div class="decision-summary-title">Planner Telemetry</div><div class="empty-state">Select an execution to inspect planner and provider usage.</div></div><div id="decisionSummary" class="decision-summary"><div class="decision-summary-title">Decision Summary</div><div class="empty-state">Select an execution to inspect policy and human decisions.</div></div></div><div><div class="timeline-heading"><strong>Operational timeline</strong><span>Sanitized view</span></div><div id="executionTimeline" class="execution-timeline"><div class="empty-state">Operator, Auditor or Admin role required to load timeline data.</div></div></div></div>
             </article>
         </section>
 
         <section class="panel architecture-panel" id="architecture">
-            <div class="panel-header">
-                <div><p class="eyebrow">ENTERPRISE GOVERNANCE FLOW</p><h2 class="command-panel-title">SecureAgent Hub Architecture</h2></div>
-                <span class="badge next">v1.3</span>
-            </div>
-            <div class="architecture-flow">
-                <div class="flow-node"><strong>User</strong><small>Intent</small></div><span>→</span>
-                <div class="flow-node security-node"><strong>Spring Security</strong><small>JWT + RBAC</small></div><span>→</span>
-                <div class="flow-node ai-node"><strong>AI Agent</strong><small>Spring AI / Planner</small></div><span>→</span>
-                <div class="flow-node security-node"><strong>Policy Engine</strong><small>Authorize</small></div><span>→</span>
-                <div class="flow-node"><strong>Tool Calling</strong><small>Proposal only</small></div><span>→</span>
-                <div class="flow-node human-node"><strong>Human Approval</strong><small>Critical actions</small></div><span>→</span>
-                <div class="flow-node"><strong>Execution</strong><small>Backend controlled</small></div><span>→</span>
-                <div class="flow-node observability-node"><strong>Observability</strong><small>Audit · Kafka · Metrics</small></div>
-            </div>
+            <div class="panel-header"><div><p class="eyebrow">ENTERPRISE GOVERNANCE FLOW</p><h2 class="command-panel-title">SecureAgent Hub Architecture</h2></div><span class="badge next">v1.3</span></div>
+            <div class="architecture-flow"><div class="flow-node"><strong>User</strong><small>Intent</small></div><span>→</span><div class="flow-node security-node"><strong>Spring Security</strong><small>JWT + RBAC</small></div><span>→</span><div class="flow-node ai-node"><strong>AI Agent</strong><small>Spring AI / Planner</small></div><span>→</span><div class="flow-node security-node"><strong>Policy Engine</strong><small>Authorize</small></div><span>→</span><div class="flow-node"><strong>Tool Calling</strong><small>Proposal only</small></div><span>→</span><div class="flow-node human-node"><strong>Human Approval</strong><small>Critical actions</small></div><span>→</span><div class="flow-node"><strong>Execution</strong><small>Backend controlled</small></div><span>→</span><div class="flow-node observability-node"><strong>Observability</strong><small>Audit · Kafka · Metrics</small></div></div>
             <p class="architecture-note"><strong>The LLM interprets.</strong> The Policy Engine authorizes. The backend executes.</p>
         </section>
     </main>
