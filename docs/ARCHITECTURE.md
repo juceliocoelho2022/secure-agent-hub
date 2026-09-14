@@ -4,8 +4,7 @@
 
 O SecureAgent Hub é uma plataforma de execução segura de agentes de IA. O princípio central é separar **interpretação probabilística** de **execução determinística**.
 
-> O LLM pode interpretar a intenção. O backend controla a execução.
-
+> **O LLM interpreta. O Risk Engine calcula. O Policy Engine autoriza. O humano aprova ações críticas. O backend executa.**
 ## Visão de alto nível
 
 ```mermaid
@@ -108,29 +107,135 @@ A DLT protege o lado do consumer. Falhas permanentes do publisher do outbox aind
 
 O catálogo de eventos, envelope, semântica de entrega, idempotência, retry e DLT estão detalhados em [`EVENTS.md`](EVENTS.md).
 
-## v1.3 — Spring AI
+## v1.3 — Controlled Spring AI + Explainable Risk
+
+A v1.3 está implementada e mantém a fronteira de segurança construída nas versões anteriores: interpretação probabilística não recebe autoridade de execução.
+
+### Controlled Planner
 
 ```mermaid
 flowchart LR
-    API --> AI[Spring AI ChatClient]
-    AI --> LLM[LLM Provider]
-    AI --> TC[Tool Calling]
-    TC --> POL[Policy Engine]
-    POL -->|permitido| EXEC[Controlled Tool Execution]
-    POL -->|crítico| HITL[Human Approval]
+    P[Prompt] --> AP[AgentPlanner]
+    AP --> RB[RuleBasedAgentPlanner]
+    AP --> AI[SpringAiAgentPlanner]
+    AI --> CC[Spring AI ChatClient]
+    CC --> PROP[AiToolProposal]
+    PROP --> CAT[ToolCatalog]
+    CAT --> PLAN[AgentPlan]
+    RB --> PLAN
+    PLAN --> POL[Policy Engine]
 ```
 
-A v1.3 substituirá/estenderá o planner determinístico com interpretação via LLM, sem mover a autoridade de execução para o modelo.
+O `ChatClient` produz uma proposta estruturada. O backend valida a tool contra `ToolCatalog`. O modelo não recebe `ToolExecutor`, callbacks de execução ou autoridade de aprovação.
 
-Objetivos:
-- ChatClient;
-- Tool Calling;
-- structured output;
-- provider abstraction;
-- métricas de token/custo;
-- integração obrigatória com Policy Engine;
-- Human-in-the-Loop para tools críticas.
+### Planner provenance e telemetria
 
+Cada `AgentPlan` registra a origem:
+- `RULE_BASED`;
+- `SPRING_AI`.
+
+Quando o provider disponibiliza usage metadata, a execução persiste:
+- `promptTokens`;
+- `completionTokens`;
+- `totalTokens`.
+
+Não são fabricados valores `0` quando a telemetria do provider está indisponível.
+
+### Fail-safe
+
+Falha de provider, resposta nula, payload malformado ou tool fora da allowlist aciona fallback determinístico para `RuleBasedAgentPlanner`.
+
+### Explainable Risk Engine
+
+O fluxo de risco recebe contexto estruturado e calcula score no backend.
+
+Regras iniciais:
+- `HIGH_AMOUNT` +35;
+- `FOREIGN_COUNTRY` +25;
+- `UNUSUAL_HOUR` +20;
+- `RAPID_RETRY` +15;
+- `KNOWN_DEVICE` -10.
+
+Faixas:
+- `0–29` LOW;
+- `30–59` MEDIUM;
+- `60–79` HIGH;
+- `80–100` CRITICAL.
+
+O score é limitado ao intervalo `0..100`.
+
+### Risk → Recommendation → Policy → HITL
+
+```mermaid
+flowchart TD
+    CTX[Structured Context] --> RISK[ExplainableRiskService]
+    RISK --> ASSESS[RiskAssessment]
+    ASSESS -->|LOW/MEDIUM/HIGH| DONE[Complete Risk Assessment]
+    ASSESS -->|CRITICAL| REC[RiskRecommendationService]
+    REC --> ACT[blockCard / CRITICAL_RISK]
+    ACT --> POL[Policy Engine]
+    POL --> HITL[REQUIRE_APPROVAL]
+    HITL -->|Reject| REJ[REJECTED]
+    HITL -->|Approve| EXEC[ToolExecutor]
+    EXEC --> COMPLETE[COMPLETED]
+```
+
+**Recomendação não é autorização.** `RiskRecommendationService` pode recomendar `blockCard` para risco `CRITICAL`, mas a ação protegida obrigatoriamente volta ao `PolicyService`.
+
+A execução original é reutilizada para manter score, reasons, recommendation, aprovação e execução controlada no mesmo agregado.
+
+### Cenário TX-9001
+
+```text
+Amount: 9800
+Country: US
+Usual country: BR
+Hour: 2
+Rapid retry: true
+Known device: false
+
+=> 95 / CRITICAL
+=> HIGH_AMOUNT
+=> FOREIGN_COUNTRY
+=> UNUSUAL_HOUR
+=> RAPID_RETRY
+=> Recommended Action: blockCard
+=> Reason: CRITICAL_RISK
+=> Policy: REQUIRE_APPROVAL
+```
+
+### Dashboard / Operational Intelligence
+
+O command center expõe dados reais da aplicação:
+- Execution Status;
+- Planner Usage;
+- Approval Pressure;
+- Risk Overview;
+- Recommended Action;
+- Event Pipeline Health;
+- Execution Inspector;
+- timeline governada;
+- tema dark/light.
+
+Métricas indisponíveis são apresentadas como `n/a`; a interface não inventa saúde de Kafka/DLT sem telemetria confiável.
+
+### Security invariant
+
+```text
+LLM output
+   ↓
+Backend validation
+   ↓
+Risk Engine (quando aplicável)
+   ↓
+Policy Engine
+   ↓
+Human approval (quando obrigatório)
+   ↓
+Controlled backend execution
+```
+
+Nem saída de LLM nem score de risco executam uma ação protegida diretamente.
 ## v1.4 — RAG
 
 ```mermaid

@@ -38,16 +38,33 @@
 - propagação de request correlation ID e causation ID
 - testes de compatibilidade/versionamento de contratos
 
-## ▶ v1.3 — Spring AI
-- ChatClient
-- Tool Calling
-- structured output
-- AI gateway / provider abstraction
-- integração do planejamento probabilístico com Policy Engine determinístico
-- token/cost metrics
-- proteção contra execução direta de tools pelo modelo
-
-## v1.4 — RAG
+## ✅ v1.3 — Governed Spring AI + Explainable Risk
+- Spring AI 1.1.8 foundation
+- `ChatClient`
+- structured AI tool proposal
+- backend-owned `ToolCatalog`
+- config-driven planner selection
+- deterministic fallback
+- planner provenance (`RULE_BASED` / `SPRING_AI`)
+- token usage telemetry quando disponível
+- automatic LLM tool execution desabilitado
+- Policy Engine permanece autoritativo
+- Human-in-the-Loop preservado para tools críticas
+- dashboard operacional + Execution Inspector
+- timeline governada
+- dark/light theme
+- live command-center analytics
+- Risk Overview
+- Event Pipeline Health
+- Explainable Risk Engine
+- score, level e reasons persistidos
+- recomendação `blockCard` para risco `CRITICAL`
+- `CRITICAL_RISK` como razão da recomendação
+- recomendação não executa automaticamente
+- Policy Engine avalia `blockCard`
+- Human Approval obrigatório
+- eventos `agent.risk.assessed` e `agent.risk.action-recommended`
+## ▶ v1.4 — RAG
 - pgvector
 - ingestão de documentos
 - embeddings

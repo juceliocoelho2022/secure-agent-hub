@@ -11,7 +11,7 @@
 
 O **SecureAgent Hub** é um projeto de engenharia para estudar como colocar agentes de IA em produção sem entregar controle irrestrito ao modelo. A plataforma separa interpretação de intenção, autorização e execução real, aplicando **JWT/RBAC, Policy Engine, Human-in-the-Loop, auditoria, Kafka e controles explícitos para uso de LLMs**.
 
-> **Princípio arquitetural:** o LLM interpreta. O Policy Engine autoriza. O backend executa.
+> **Princípio arquitetural:** o LLM interpreta. O Risk Engine calcula. O Policy Engine autoriza. O humano aprova ações críticas. O backend executa.
 
 ---
 
@@ -25,8 +25,7 @@ A aplicação inclui um dashboard operacional para acompanhar execuções, aprov
 
 ---
 
-## ✨ Estado atual — v1.3 Controlled Spring AI Planner
-
+## Estado atual — v1.3 Governed Spring AI + Explainable Risk
 | Capacidade | Status |
 |---|---|
 | Java 21 + Spring Boot 3.5.5 | ✅ |
@@ -44,8 +43,14 @@ A aplicação inclui um dashboard operacional para acompanhar execuções, aprov
 | Structured AI planning | ✅ |
 | Governed tool allowlist | ✅ |
 | Deterministic fallback | ✅ |
+| Explainable Risk Engine | ✅ |
+| Score, nível e reasons persistidos | ✅ |
+| Recomendação governada para risco crítico | ✅ |
+| `blockCard` exige Policy Engine + HITL | ✅ |
+| Recommended Action no dashboard | ✅ |
+| Tema Dark / Light persistente | ✅ |
 | Automatic LLM tool execution | 🚫 desabilitado |
-| RAG + pgvector | 🗺️ v1.4 |
+| RAG + pgvector | v1.4 NEXT |
 | OpenTelemetry + Prometheus + Grafana | 🗺️ v1.5 |
 | AWS + Terraform + Kubernetes | 🗺️ v2.0 |
 
@@ -84,8 +89,77 @@ Para operações protegidas como `blockCard`, a origem `SPRING_AI` não altera a
 
 ---
 
-## 🤖 Spring AI Controlled Planner
 
+## Explainable Risk + Governed Recommendation
+
+A v1.3 adiciona um **Risk Engine determinístico e explicável**. O LLM não calcula score e não inventa fatos da transação. O backend recebe contexto estruturado, aplica regras testáveis e persiste `riskScore`, `riskLevel` e `riskReasons`.
+
+```text
+Structured Transaction Context
+            ↓
+      calculateRisk
+            ↓
+  ExplainableRiskService
+            ↓
+ score + level + reasons
+            ↓
+ RiskRecommendationService
+            ↓
+ CRITICAL → blockCard / CRITICAL_RISK
+            ↓
+       Policy Engine
+            ↓
+     REQUIRE_APPROVAL
+            ↓
+    Human-in-the-Loop
+      ↙             ↘
+   REJECT          APPROVE
+                     ↓
+                ToolExecutor
+                     ↓
+                  COMPLETED
+```
+
+**Invariante de segurança:** recomendação não é autorização. Mesmo em risco `CRITICAL`, `blockCard` não é executado automaticamente.
+
+### Cenário de demonstração — TX-9001
+
+```json
+{
+  "agent": "fraud-agent",
+  "prompt": "Calcule o risco da operação TX-9001",
+  "context": {
+    "transactionId": "TX-9001",
+    "amount": 9800.00,
+    "country": "US",
+    "usualCountry": "BR",
+    "hour": 2,
+    "rapidRetry": true,
+    "knownDevice": false
+  }
+}
+```
+
+Resultado esperado:
+
+```text
+95 / CRITICAL
+HIGH_AMOUNT
+FOREIGN_COUNTRY
+UNUSUAL_HOUR
+RAPID_RETRY
+
+Recommended Action: blockCard
+Reason: CRITICAL_RISK
+Policy: REQUIRE_APPROVAL
+Human: PENDING
+Execution: NOT_EXECUTED
+```
+
+Após aprovação humana autorizada, o backend executa a tool protegida e mantém a trilha em auditoria e eventos.
+
+---
+## Spring AI Controlled Planner
 Existem dois modos:
 
 ```text
@@ -260,9 +334,9 @@ v1.1  JWT / Persisted RBAC              ✅
   ↓
 v1.2  Event-Driven / Kafka              ✅
   ↓
-v1.3  Spring AI Controlled Planner      🚧
+v1.3  Governed Spring AI + Risk/HITL    DONE
   ↓
-v1.4  RAG / pgvector                    🗺️
+v1.4  RAG / pgvector                    NEXT
   ↓
 v1.5  Observability / AgentOps          🗺️
   ↓
