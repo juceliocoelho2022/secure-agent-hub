@@ -8,7 +8,6 @@ public class ToolExecutor {
         return switch (toolName) {
             case "getTransaction" -> "Transaction retrieved successfully (mock).";
             case "getCustomer" -> "Customer retrieved successfully (mock).";
-            case "calculateRisk" -> "Risk score calculated: 42 (mock).";
             case "blockCard" -> "Card blocked successfully (mock).";
             default -> throw new IllegalArgumentException("Unsupported tool: " + toolName);
         };
