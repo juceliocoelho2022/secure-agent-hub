@@ -39,12 +39,32 @@
         </section>
 
         <section class="operations-intelligence-grid" aria-label="Operational intelligence">
-            <article class="panel risk-overview-card"><div class="analytics-heading"><div><p class="eyebrow">RISK INTELLIGENCE</p><h2>Risk Overview</h2></div><span class="analytics-icon">△</span></div><div id="riskOverview" class="risk-overview"><strong>n/a</strong><span>No trusted risk score available</span><small>Only non-mock execution results are eligible.</small></div></article>
+            <article class="panel risk-overview-card"><div class="analytics-heading"><div><p class="eyebrow">RISK INTELLIGENCE</p><h2>Risk Overview</h2></div><span class="analytics-icon">△</span></div><div id="riskOverview" class="risk-overview"><strong>n/a</strong><span>No trusted risk score available</span><small>Only backend-calculated assessments are eligible.</small></div></article>
             <article class="panel pipeline-health-card"><div class="analytics-heading"><div><p class="eyebrow">EVENT-DRIVEN OPERATIONS</p><h2>Event Pipeline Health</h2></div><span class="analytics-live">LIVE</span></div><div id="eventPipelineHealth" class="pipeline-health"><div class="pipeline-node neutral"><span>Outbox</span><strong>n/a</strong><small>n/a</small></div><div class="pipeline-node neutral"><span>Kafka</span><strong>n/a</strong><small>n/a</small></div><div class="pipeline-node neutral"><span>Consumer</span><strong>n/a</strong><small>n/a</small></div><div class="pipeline-node neutral"><span>DLT</span><strong>n/a</strong><small>n/a</small></div></div></article>
         </section>
 
         <section class="command-center-grid">
-            <article class="panel agents-overview" id="agents"><div class="panel-header"><div><p class="eyebrow">AI AGENT CONTROL</p><h2 class="command-panel-title">Agents</h2></div><span class="badge secure">Backend controlled</span></div><form id="agentPromptForm" class="agent-prompt-form"><div class="agent-form-row"><label class="agent-field agent-name-field">Agent<select id="agentName"><option value="fraud-agent">Fraud Agent</option><option value="operations-agent">Operations Agent</option></select></label><label class="agent-field prompt-field">Intent<input id="agentPrompt" maxlength="2000" placeholder="Ex.: analise a transação 123 e bloqueie o cartão se houver alto risco" required></label><button class="primary-button agent-submit" id="agentSubmitButton" type="submit">Execute</button></div><p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p></form><div class="agent-catalog" aria-label="Governed agent catalog"><div class="agent-catalog-card"><div class="agent-avatar">F</div><div><strong>Fraud Agent</strong><span>Risk analysis · protected actions</span></div></div><div class="agent-catalog-card"><div class="agent-avatar">O</div><div><strong>Operations Agent</strong><span>Operational analysis · controlled tools</span></div></div></div><div class="control-strip"><span>Intent</span><b>→</b><span>AI Agent</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span></div></article>
+            <article class="panel agents-overview" id="agents">
+                <div class="panel-header"><div><p class="eyebrow">AI AGENT CONTROL</p><h2 class="command-panel-title">Agents</h2></div><span class="badge secure">Backend controlled</span></div>
+                <form id="agentPromptForm" class="agent-prompt-form">
+                    <div class="agent-form-row"><label class="agent-field agent-name-field">Agent<select id="agentName"><option value="fraud-agent">Fraud Agent</option><option value="operations-agent">Operations Agent</option></select></label><label class="agent-field prompt-field">Intent<input id="agentPrompt" maxlength="2000" placeholder="Ex.: calcule o risco da operação TX-9001" required></label><button class="primary-button agent-submit" id="agentSubmitButton" type="submit">Execute</button></div>
+                    <details class="risk-context-panel">
+                        <summary>Structured Risk Context <span>trusted backend facts</span></summary>
+                        <div class="risk-context-grid">
+                            <label>Transaction ID<input id="riskTransactionId" placeholder="TX-9001"></label>
+                            <label>Amount<input id="riskAmount" type="number" min="0" step="0.01" placeholder="9800.00"></label>
+                            <label>Country<input id="riskCountry" maxlength="2" placeholder="US"></label>
+                            <label>Usual country<input id="riskUsualCountry" maxlength="2" placeholder="BR"></label>
+                            <label>Hour (0-23)<input id="riskHour" type="number" min="0" max="23" step="1" placeholder="2"></label>
+                            <label class="risk-checkbox"><input id="riskRapidRetry" type="checkbox"> Rapid retry</label>
+                            <label class="risk-checkbox"><input id="riskKnownDevice" type="checkbox"> Known device</label>
+                        </div>
+                        <small class="risk-context-note">These values are structured facts. The LLM does not invent them and does not calculate the score.</small>
+                    </details>
+                    <p class="form-message" id="agentMessage">Authenticate before submitting an agent execution.</p>
+                </form>
+                <div class="agent-catalog" aria-label="Governed agent catalog"><div class="agent-catalog-card"><div class="agent-avatar">F</div><div><strong>Fraud Agent</strong><span>Risk analysis · protected actions</span></div></div><div class="agent-catalog-card"><div class="agent-avatar">O</div><div><strong>Operations Agent</strong><span>Operational analysis · controlled tools</span></div></div></div><div class="control-strip"><span>Intent</span><b>→</b><span>AI Agent</span><b>→</b><span>Policy Engine</span><b>→</b><span>Approval</span><b>→</b><span>Tool</span></div>
+            </article>
 
             <article class="panel governance-overview" id="approvals"><div class="panel-header"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2 class="command-panel-title">Pending Approvals</h2></div><span class="badge next">Protected</span></div><div class="governance-strip"><div class="governance-chip"><span>Policy</span><strong>Authoritative</strong></div><div class="governance-chip"><span>Critical tools</span><strong>HITL</strong></div><div class="governance-chip"><span>Audit</span><strong>Enabled</strong></div></div><p class="form-message" id="approvalFeedback"></p><div id="approvalList" class="stack-list"><div class="empty-state">Authenticate to load approval data.</div></div></article>
 
