@@ -73,6 +73,22 @@ class DashboardResourceTest {
         assertTrue(html.contains("Observability"), "architecture should visually identify the observability stage");
     }
 
+    @Test
+    void dashboardExposesLiveAgentAndExecutionAnalytics() throws IOException {
+        String html = resource("/static/dashboard.html");
+        String analytics = resource("/static/assets/dashboard-analytics.js");
+
+        assertTrue(html.contains("id=\"agentStatusPanel\""), "dashboard should expose a live agent status panel");
+        assertTrue(html.contains("id=\"executionStatusChart\""), "dashboard should expose execution status analytics");
+        assertTrue(html.contains("id=\"plannerUsageChart\""), "dashboard should expose planner usage analytics");
+        assertTrue(html.contains("id=\"approvalPressure\""), "dashboard should expose approval pressure");
+        assertTrue(html.contains("/assets/dashboard-analytics.js"), "dashboard should load the live analytics renderer");
+        assertTrue(analytics.contains("state.executions"), "analytics should derive values from loaded backend executions");
+        assertTrue(analytics.contains("plannerSource"), "analytics should derive planner usage from execution provenance");
+        assertTrue(analytics.contains("WAITING_APPROVAL"), "analytics should derive approval pressure from governed execution state");
+        assertTrue(analytics.contains("n/a"), "analytics should use neutral values when real data is unavailable");
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getResourceAsStream(path)) {
             if (input == null) {
