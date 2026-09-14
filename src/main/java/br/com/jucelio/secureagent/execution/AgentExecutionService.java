@@ -6,6 +6,9 @@ import br.com.jucelio.secureagent.audit.AuditService;
 import br.com.jucelio.secureagent.event.DomainEventService;
 import br.com.jucelio.secureagent.policy.PolicyDecision;
 import br.com.jucelio.secureagent.policy.PolicyService;
+import br.com.jucelio.secureagent.risk.ExplainableRiskService;
+import br.com.jucelio.secureagent.risk.RiskAssessment;
+import br.com.jucelio.secureagent.risk.RiskAssessmentRequest;
 import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.AgentPlanner;
 import br.com.jucelio.secureagent.tool.ToolExecutor;
@@ -26,6 +29,7 @@ public class AgentExecutionService {
     private final ToolExecutor toolExecutor;
     private final AuditService auditService;
     private final DomainEventService domainEventService;
+    private final ExplainableRiskService riskService;
 
     public AgentExecutionService(AgentExecutionRepository repository,
                                  ApprovalRequestRepository approvalRepository,
@@ -33,7 +37,8 @@ public class AgentExecutionService {
                                  PolicyService policyService,
                                  ToolExecutor toolExecutor,
                                  AuditService auditService,
-                                 DomainEventService domainEventService) {
+                                 DomainEventService domainEventService,
+                                 ExplainableRiskService riskService) {
         this.repository = repository;
         this.approvalRepository = approvalRepository;
         this.planner = planner;
@@ -41,6 +46,7 @@ public class AgentExecutionService {
         this.toolExecutor = toolExecutor;
         this.auditService = auditService;
         this.domainEventService = domainEventService;
+        this.riskService = riskService;
     }
 
     @Transactional
@@ -76,15 +82,9 @@ public class AgentExecutionService {
         plannedEvent.put("tool", plan.toolName());
         plannedEvent.put("explanation", plan.explanation());
         plannedEvent.put("source", plan.source().name());
-        if (plan.usage().promptTokens() != null) {
-            plannedEvent.put("promptTokens", plan.usage().promptTokens());
-        }
-        if (plan.usage().completionTokens() != null) {
-            plannedEvent.put("completionTokens", plan.usage().completionTokens());
-        }
-        if (plan.usage().totalTokens() != null) {
-            plannedEvent.put("totalTokens", plan.usage().totalTokens());
-        }
+        if (plan.usage().promptTokens() != null) plannedEvent.put("promptTokens", plan.usage().promptTokens());
+        if (plan.usage().completionTokens() != null) plannedEvent.put("completionTokens", plan.usage().completionTokens());
+        if (plan.usage().totalTokens() != null) plannedEvent.put("totalTokens", plan.usage().totalTokens());
         domainEventService.append(execution.getEntityId(), "agent.tool.planned", plannedEvent);
 
         PolicyDecision decision = policyService.evaluate(plan.toolName());
@@ -109,12 +109,65 @@ public class AgentExecutionService {
             return repository.save(execution);
         }
 
+        if ("calculateRisk".equals(plan.toolName())) {
+            return executeRiskAssessment(execution, request.context());
+        }
+
         String result = toolExecutor.execute(plan.toolName());
         execution.complete(result);
         auditService.record(execution.getEntityId(), "TOOL_SERVICE", "TOOL_EXECUTED", result);
         domainEventService.append(execution.getEntityId(), "agent.execution.completed", Map.of(
                 "executionId", execution.getEntityId().toString(),
                 "tool", plan.toolName(),
+                "result", result));
+        return repository.save(execution);
+    }
+
+    private AgentExecution executeRiskAssessment(AgentExecution execution, ExecutionContext context) {
+        if (context == null) {
+            String result = "Risk assessment unavailable: structured context required.";
+            execution.complete(result);
+            auditService.record(execution.getEntityId(), "RISK_ENGINE", "RISK_CONTEXT_MISSING", result);
+            domainEventService.append(execution.getEntityId(), "agent.risk.unavailable", Map.of(
+                    "executionId", execution.getEntityId().toString(),
+                    "reason", "STRUCTURED_CONTEXT_REQUIRED"));
+            return repository.save(execution);
+        }
+
+        RiskAssessment assessment = riskService.assess(new RiskAssessmentRequest(
+                context.transactionId(),
+                context.amount(),
+                context.country(),
+                context.usualCountry(),
+                context.hour(),
+                context.rapidRetry(),
+                context.knownDevice()));
+
+        execution.recordRisk(assessment);
+        String result = "riskScore=" + assessment.score()
+                + "; riskLevel=" + assessment.level().name()
+                + "; reasons=" + assessment.reasons();
+        execution.complete(result);
+
+        auditService.record(
+                execution.getEntityId(),
+                "RISK_ENGINE",
+                "RISK_ASSESSED",
+                "score=" + assessment.score()
+                        + " level=" + assessment.level().name()
+                        + " reasons=" + assessment.reasons());
+
+        Map<String, Object> riskEvent = new HashMap<>();
+        riskEvent.put("executionId", execution.getEntityId().toString());
+        if (context.transactionId() != null) riskEvent.put("transactionId", context.transactionId());
+        riskEvent.put("riskScore", assessment.score());
+        riskEvent.put("riskLevel", assessment.level().name());
+        riskEvent.put("reasons", assessment.reasons().stream().map(Enum::name).toList());
+        domainEventService.append(execution.getEntityId(), "agent.risk.assessed", riskEvent);
+
+        domainEventService.append(execution.getEntityId(), "agent.execution.completed", Map.of(
+                "executionId", execution.getEntityId().toString(),
+                "tool", "calculateRisk",
                 "result", result));
         return repository.save(execution);
     }
