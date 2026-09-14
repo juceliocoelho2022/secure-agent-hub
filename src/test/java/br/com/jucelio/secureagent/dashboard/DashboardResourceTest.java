@@ -89,6 +89,21 @@ class DashboardResourceTest {
         assertTrue(analytics.contains("n/a"), "analytics should use neutral values when real data is unavailable");
     }
 
+    @Test
+    void dashboardSupportsPersistentDarkAndLightThemes() throws IOException {
+        String html = resource("/static/dashboard.html");
+        String theme = resource("/static/assets/dashboard-theme.js");
+        String visual = resource("/static/assets/dashboard-visual.css");
+
+        assertTrue(html.contains("id=\"themeToggle\""), "dashboard should expose a theme toggle in the command center");
+        assertTrue(html.contains("/assets/dashboard-theme.js"), "dashboard should load the theme controller");
+        assertTrue(theme.contains("localStorage"), "dashboard should persist the selected theme in the browser");
+        assertTrue(theme.contains("data-theme"), "dashboard should apply the selected theme through a document attribute");
+        assertTrue(theme.contains("light"), "dashboard should support a light theme");
+        assertTrue(theme.contains("dark"), "dashboard should support a dark theme");
+        assertTrue(visual.contains("data-theme=\"light\""), "visual layer should define the white/light palette");
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getResourceAsStream(path)) {
             if (input == null) {
