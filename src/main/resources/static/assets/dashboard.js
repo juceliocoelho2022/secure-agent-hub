@@ -220,10 +220,33 @@ async function loadApprovals() {
     }
 }
 
-async function createExecution(agent, prompt) {
+function buildExecutionContext() {
+    const transactionId = document.getElementById('riskTransactionId')?.value.trim() || '';
+    const amountText = document.getElementById('riskAmount')?.value.trim() || '';
+    const country = document.getElementById('riskCountry')?.value.trim().toUpperCase() || '';
+    const usualCountry = document.getElementById('riskUsualCountry')?.value.trim().toUpperCase() || '';
+    const hourText = document.getElementById('riskHour')?.value.trim() || '';
+    const rapidRetry = Boolean(document.getElementById('riskRapidRetry')?.checked);
+    const knownDevice = Boolean(document.getElementById('riskKnownDevice')?.checked);
+
+    const hasStructuredFacts = transactionId || amountText || country || usualCountry || hourText || rapidRetry || knownDevice;
+    if (!hasStructuredFacts) return null;
+
+    return {
+        transactionId: transactionId || null,
+        amount: amountText ? Number(amountText) : null,
+        country: country || null,
+        usualCountry: usualCountry || null,
+        hour: hourText ? Number.parseInt(hourText, 10) : null,
+        rapidRetry,
+        knownDevice
+    };
+}
+
+async function createExecution(agent, prompt, context) {
     return api('/api/v1/agents/executions', {
         method: 'POST',
-        body: JSON.stringify({ agent, prompt })
+        body: JSON.stringify({ agent, prompt, context })
     });
 }
 
@@ -287,11 +310,15 @@ function renderApprovals(approvals) {
 async function inspectExecution(item) {
     state.selectedExecutionId = item.id;
     renderExecutions(state.executions);
+    const riskLine = Number.isInteger(item.riskScore)
+        ? `<div class="inspector-kv"><span>Risk</span><strong>${escapeHtml(item.riskScore)}/100 · ${escapeHtml(item.riskLevel || 'n/a')}</strong></div>`
+        : '';
     executionInspectorSummary.innerHTML = `
         <div class="inspector-kv"><span>Execution</span><strong>${escapeHtml(shortId(item.id))}</strong></div>
         <div class="inspector-kv"><span>Agent</span><strong>${escapeHtml(item.agent || '—')}</strong></div>
         <div class="inspector-kv"><span>Status</span><strong class="status-text ${statusClass(item.status)}">${escapeHtml(item.status || 'UNKNOWN')}</strong></div>
         <div class="inspector-kv"><span>Requested tool</span><strong>${escapeHtml(item.requestedTool || 'No critical tool')}</strong></div>
+        ${riskLine}
         <div class="inspector-block"><span>Intent</span><p>${escapeHtml(item.prompt || '—')}</p></div>
         <div class="inspector-block"><span>Result</span><p>${escapeHtml(item.result || 'Awaiting final result')}</p></div>`;
 
@@ -475,12 +502,13 @@ agentPromptForm.addEventListener('submit', async event => {
 
     const agent = document.getElementById('agentName').value;
     const prompt = agentPrompt.value.trim();
+    const context = buildExecutionContext();
     if (!prompt) return;
 
     agentSubmitButton.disabled = true;
     agentMessage.textContent = 'Submitting governed execution...';
     try {
-        const execution = await createExecution(agent, prompt);
+        const execution = await createExecution(agent, prompt, context);
         state.selectedExecutionId = execution.id;
         agentMessage.textContent = `Execution ${execution.id} → ${execution.status}`;
         agentPrompt.value = '';
