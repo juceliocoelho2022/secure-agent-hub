@@ -1,9 +1,15 @@
 package br.com.jucelio.secureagent.execution;
 
 import br.com.jucelio.secureagent.common.BaseEntity;
+import br.com.jucelio.secureagent.risk.RiskAssessment;
+import br.com.jucelio.secureagent.risk.RiskLevel;
+import br.com.jucelio.secureagent.risk.RiskReason;
 import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.PlannerSource;
 import jakarta.persistence.*;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Entity
 @Table(name = "agent_executions")
@@ -42,6 +48,16 @@ public class AgentExecution extends BaseEntity {
     @Column(name = "total_tokens")
     private Integer totalTokens;
 
+    @Column(name = "risk_score")
+    private Integer riskScore;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", length = 16)
+    private RiskLevel riskLevel;
+
+    @Column(name = "risk_reasons", length = 1000)
+    private String riskReasons;
+
     protected AgentExecution() {}
 
     public AgentExecution(String agentName, String prompt) {
@@ -62,6 +78,16 @@ public class AgentExecution extends BaseEntity {
     public Integer getPromptTokens() { return promptTokens; }
     public Integer getCompletionTokens() { return completionTokens; }
     public Integer getTotalTokens() { return totalTokens; }
+    public Integer getRiskScore() { return riskScore; }
+    public RiskLevel getRiskLevel() { return riskLevel; }
+
+    public List<RiskReason> getRiskReasons() {
+        if (riskReasons == null || riskReasons.isBlank()) return List.of();
+        return Arrays.stream(riskReasons.split(","))
+                .filter(value -> !value.isBlank())
+                .map(RiskReason::valueOf)
+                .toList();
+    }
 
     public void start() { this.status = ExecutionStatus.RUNNING; }
 
@@ -72,10 +98,19 @@ public class AgentExecution extends BaseEntity {
         this.totalTokens = plan.usage().totalTokens();
     }
 
+    public void recordRisk(RiskAssessment assessment) {
+        this.riskScore = assessment.score();
+        this.riskLevel = assessment.level();
+        this.riskReasons = assessment.reasons().stream()
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
     public void waitForApproval(String requestedTool) {
         this.requestedTool = requestedTool;
         this.status = ExecutionStatus.WAITING_APPROVAL;
     }
+
     public void complete(String result) { this.result = result; this.status = ExecutionStatus.COMPLETED; }
     public void reject(String result) { this.result = result; this.status = ExecutionStatus.REJECTED; }
 }
