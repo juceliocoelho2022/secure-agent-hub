@@ -4,6 +4,7 @@ import br.com.jucelio.secureagent.common.BaseEntity;
 import br.com.jucelio.secureagent.risk.RiskAssessment;
 import br.com.jucelio.secureagent.risk.RiskLevel;
 import br.com.jucelio.secureagent.risk.RiskReason;
+import br.com.jucelio.secureagent.risk.RiskRecommendation;
 import br.com.jucelio.secureagent.tool.AgentPlan;
 import br.com.jucelio.secureagent.tool.PlannerSource;
 import jakarta.persistence.*;
@@ -14,60 +15,24 @@ import java.util.List;
 @Entity
 @Table(name = "agent_executions")
 public class AgentExecution extends BaseEntity {
-
-    @Id
-    @Column(nullable = false, updatable = false)
-    private java.util.UUID entityId;
-
-    @Column(nullable = false, length = 80)
-    private String agentName;
-
-    @Column(nullable = false, length = 2000)
-    private String prompt;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    private ExecutionStatus status;
-
-    @Column(length = 120)
-    private String requestedTool;
-
-    @Column(length = 4000)
-    private String result;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "planner_source", length = 32)
-    private PlannerSource plannerSource;
-
-    @Column(name = "prompt_tokens")
-    private Integer promptTokens;
-
-    @Column(name = "completion_tokens")
-    private Integer completionTokens;
-
-    @Column(name = "total_tokens")
-    private Integer totalTokens;
-
-    @Column(name = "risk_score")
-    private Integer riskScore;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "risk_level", length = 16)
-    private RiskLevel riskLevel;
-
-    @Column(name = "risk_reasons", length = 1000)
-    private String riskReasons;
+    @Id @Column(nullable = false, updatable = false) private java.util.UUID entityId;
+    @Column(nullable = false, length = 80) private String agentName;
+    @Column(nullable = false, length = 2000) private String prompt;
+    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 32) private ExecutionStatus status;
+    @Column(length = 120) private String requestedTool;
+    @Column(length = 4000) private String result;
+    @Enumerated(EnumType.STRING) @Column(name = "planner_source", length = 32) private PlannerSource plannerSource;
+    @Column(name = "prompt_tokens") private Integer promptTokens;
+    @Column(name = "completion_tokens") private Integer completionTokens;
+    @Column(name = "total_tokens") private Integer totalTokens;
+    @Column(name = "risk_score") private Integer riskScore;
+    @Enumerated(EnumType.STRING) @Column(name = "risk_level", length = 16) private RiskLevel riskLevel;
+    @Column(name = "risk_reasons", length = 1000) private String riskReasons;
+    @Column(name = "recommended_action", length = 120) private String recommendedAction;
+    @Column(name = "recommendation_reason", length = 120) private String recommendationReason;
 
     protected AgentExecution() {}
-
-    public AgentExecution(String agentName, String prompt) {
-        this.entityId = java.util.UUID.randomUUID();
-        this.id = entityId;
-        this.agentName = agentName;
-        this.prompt = prompt;
-        this.status = ExecutionStatus.RECEIVED;
-    }
-
+    public AgentExecution(String agentName, String prompt) { this.entityId = java.util.UUID.randomUUID(); this.id = entityId; this.agentName = agentName; this.prompt = prompt; this.status = ExecutionStatus.RECEIVED; }
     public java.util.UUID getEntityId() { return entityId; }
     public String getAgentName() { return agentName; }
     public String getPrompt() { return prompt; }
@@ -80,37 +45,14 @@ public class AgentExecution extends BaseEntity {
     public Integer getTotalTokens() { return totalTokens; }
     public Integer getRiskScore() { return riskScore; }
     public RiskLevel getRiskLevel() { return riskLevel; }
-
-    public List<RiskReason> getRiskReasons() {
-        if (riskReasons == null || riskReasons.isBlank()) return List.of();
-        return Arrays.stream(riskReasons.split(","))
-                .filter(value -> !value.isBlank())
-                .map(RiskReason::valueOf)
-                .toList();
-    }
-
+    public String getRecommendedAction() { return recommendedAction; }
+    public String getRecommendationReason() { return recommendationReason; }
+    public List<RiskReason> getRiskReasons() { if (riskReasons == null || riskReasons.isBlank()) return List.of(); return Arrays.stream(riskReasons.split(",")).filter(v -> !v.isBlank()).map(RiskReason::valueOf).toList(); }
     public void start() { this.status = ExecutionStatus.RUNNING; }
-
-    public void recordPlanning(AgentPlan plan) {
-        this.plannerSource = plan.source();
-        this.promptTokens = plan.usage().promptTokens();
-        this.completionTokens = plan.usage().completionTokens();
-        this.totalTokens = plan.usage().totalTokens();
-    }
-
-    public void recordRisk(RiskAssessment assessment) {
-        this.riskScore = assessment.score();
-        this.riskLevel = assessment.level();
-        this.riskReasons = assessment.reasons().stream()
-                .map(Enum::name)
-                .collect(java.util.stream.Collectors.joining(","));
-    }
-
-    public void waitForApproval(String requestedTool) {
-        this.requestedTool = requestedTool;
-        this.status = ExecutionStatus.WAITING_APPROVAL;
-    }
-
+    public void recordPlanning(AgentPlan plan) { this.plannerSource = plan.source(); this.promptTokens = plan.usage().promptTokens(); this.completionTokens = plan.usage().completionTokens(); this.totalTokens = plan.usage().totalTokens(); }
+    public void recordRisk(RiskAssessment assessment) { this.riskScore = assessment.score(); this.riskLevel = assessment.level(); this.riskReasons = assessment.reasons().stream().map(Enum::name).collect(java.util.stream.Collectors.joining(",")); }
+    public void recordRecommendation(RiskRecommendation recommendation) { this.recommendedAction = recommendation.action(); this.recommendationReason = recommendation.reason(); }
+    public void waitForApproval(String requestedTool) { this.requestedTool = requestedTool; this.status = ExecutionStatus.WAITING_APPROVAL; }
     public void complete(String result) { this.result = result; this.status = ExecutionStatus.COMPLETED; }
     public void reject(String result) { this.result = result; this.status = ExecutionStatus.REJECTED; }
 }
