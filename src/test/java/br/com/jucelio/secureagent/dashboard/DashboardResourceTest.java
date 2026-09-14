@@ -101,22 +101,20 @@ class DashboardResourceTest {
     void dashboardExposesOperationalIntelligenceWithoutFabricatingRiskOrPipelineData() throws IOException {
         String html = resource("/static/dashboard.html");
         String operations = resource("/static/assets/dashboard-operations.js");
-
-        assertTrue(html.contains("id=\"riskOverview\""), "dashboard should expose risk overview");
-        assertTrue(html.contains("id=\"eventPipelineHealth\""), "dashboard should expose event pipeline health");
-        assertTrue(html.contains("/assets/dashboard-operations.js"), "dashboard should load operational intelligence renderer");
-        assertTrue(operations.contains("/api/v1/operations/pipeline-health"), "pipeline data should come from the backend");
-        assertTrue(operations.contains("candidate.riskScore"), "risk overview should use persisted backend risk score");
-        assertTrue(operations.contains("candidate.riskLevel"), "risk overview should use persisted backend risk level");
-        assertTrue(operations.contains("candidate.riskReasons"), "risk overview should show explainable backend reasons");
-        assertTrue(operations.contains("n/a"), "unavailable metrics should render neutrally");
+        assertTrue(html.contains("id=\"riskOverview\""));
+        assertTrue(html.contains("id=\"eventPipelineHealth\""));
+        assertTrue(html.contains("/assets/dashboard-operations.js"));
+        assertTrue(operations.contains("/api/v1/operations/pipeline-health"));
+        assertTrue(operations.contains("candidate.riskScore"));
+        assertTrue(operations.contains("candidate.riskLevel"));
+        assertTrue(operations.contains("candidate.riskReasons"));
+        assertTrue(operations.contains("n/a"));
     }
 
     @Test
     void dashboardCanSubmitTrustedStructuredRiskContext() throws IOException {
         String html = resource("/static/dashboard.html");
         String javascript = resource("/static/assets/dashboard.js");
-
         assertTrue(html.contains("id=\"riskTransactionId\""));
         assertTrue(html.contains("id=\"riskAmount\""));
         assertTrue(html.contains("id=\"riskCountry\""));
@@ -126,6 +124,18 @@ class DashboardResourceTest {
         assertTrue(html.contains("id=\"riskKnownDevice\""));
         assertTrue(javascript.contains("buildExecutionContext"));
         assertTrue(javascript.contains("JSON.stringify({ agent, prompt, context })"));
+    }
+
+    @Test
+    void dashboardShowsPersistedGovernedRiskRecommendation() throws IOException {
+        String html = resource("/static/dashboard.html");
+        String operations = resource("/static/assets/dashboard-operations.js");
+
+        assertTrue(html.contains("id=\"recommendedAction\""), "dashboard should expose a governed recommendation card");
+        assertTrue(operations.contains("recommendedAction"), "renderer should consume persisted recommendation metadata");
+        assertTrue(operations.contains("recommendationReason"), "renderer should explain why the action was recommended");
+        assertTrue(operations.contains("REQUIRE_APPROVAL"), "critical action should be shown as policy governed");
+        assertTrue(operations.contains("PENDING"), "waiting recommendation should show human decision pending");
     }
 
     private String resource(String path) throws IOException {
